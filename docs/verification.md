@@ -32,3 +32,7 @@ A inspeção visual não equivale a uma auditoria de acessibilidade. O teste de 
 ## Ampliação: revisão administrativa (20/10/2026)
 
 A suíte atual passou com **13 testes de unidade/contrato e 28 jornadas desktop/mobile**; o servidor Playwright foi iniciado com `npm run build && npm start` para verificar a invalidação do cache em produção. Lint passou com um aviso existente de `<img>` e TypeScript passou. A rota administrativa real, sem credenciais, respondeu 401. Detalhes, limitações e avisos das ferramentas de desenvolvimento: [revisão administrativa](admin-review.md).
+
+## Ampliação: galeria pública (20/10/2026)
+
+Validação atual: **15 testes unitários/contrato e 42 jornadas Playwright passaram** no build de produção, com desktop e viewport móvel. TypeScript e build passaram; lint sem erros, mantendo um aviso existente de imagem externa. A cobertura nova inclui capa/ordem, álbum, plantas, fullscreen/zoom, foco, gestos de toque e mouse, falhas de imagem e ausência de mídia. [Referências e decisões](gallery-ux.md).

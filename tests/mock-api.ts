@@ -22,10 +22,25 @@ const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
   structured_attributes: { reported_area_sqm: 82.5 },
   real_estate: null,
   publication_review: {} as Record<string, unknown>,
-  media: id === 101 ? [
-    { id: 1, hosted_url: "https://ik.imagekit.io/test/gallery-one.jpg", is_cover: false, position: 0, processing_status: "completed" },
-    { id: 2, hosted_url: "https://ik.imagekit.io/test/gallery-cover.jpg", is_cover: true, position: 1, processing_status: "completed" },
-  ] : [],
+  media:
+    id === 101
+      ? [
+          {
+            id: 1,
+            hosted_url: "https://ik.imagekit.io/test/gallery-one.jpg",
+            is_cover: false,
+            position: 0,
+            processing_status: "completed",
+          },
+          {
+            id: 2,
+            hosted_url: "https://ik.imagekit.io/test/gallery-cover.jpg",
+            is_cover: true,
+            position: 1,
+            processing_status: "completed",
+          },
+        ]
+      : [],
   sources: [
     {
       id: id * 10 + 1,
@@ -128,7 +143,45 @@ createServer(async (req, res) => {
     return send(200, {
       data:
         match[2] === "media"
-          ? []
+          ? match[1] === "2"
+            ? [
+                ...Array.from({ length: 8 }, (_, index) => ({
+                  id: index + 100,
+                  kind: index === 7 ? "floor_plan" : "image",
+                  original_url: `https://ik.imagekit.io/test/public-${index}.jpg`,
+                  is_cover: index === 2,
+                  position: index,
+                  width: index === 4 ? 800 : 1400,
+                  height: index === 4 ? 1200 : 900,
+                  attribution: "Fonte autorizada · contrato de teste",
+                })),
+                {
+                  id: 200,
+                  kind: "video",
+                  original_url: "https://example.com/video",
+                  attribution: "Fonte do vídeo",
+                },
+                {
+                  id: 201,
+                  kind: "document",
+                  original_url: "https://example.com/documento",
+                },
+                {
+                  id: 202,
+                  kind: "image",
+                  original_url: "https://unapproved.example/image.jpg",
+                },
+                { id: 203, kind: "image", original_url: "javascript:alert(1)" },
+              ]
+            : match[1] === "3"
+              ? [
+                  {
+                    id: 300,
+                    kind: "image",
+                    original_url: "https://ik.imagekit.io/test/broken.jpg",
+                  },
+                ]
+              : []
           : match[2] === "sources"
             ? [
                 {

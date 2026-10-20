@@ -1,7 +1,8 @@
-import { MediaImage } from "@/components/media-image";
+import { PropertyGallery } from "@/components/property-gallery";
+import { prepareGallery } from "@/lib/gallery";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { House, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import {
   getListing,
   getMedia,
@@ -68,6 +69,15 @@ export default async function Detail({ params }: Props) {
   const allowed = (process.env.MEDIA_ALLOWED_HOSTS ?? "ik.imagekit.io")
     .split(",")
     .filter(Boolean);
+  const gallery = prepareGallery(
+    media.status === "fulfilled" ? media.value : [],
+    [
+      ...new Set([
+        "ik.imagekit.io",
+        ...allowed.map((h) => h.trim()).filter(Boolean),
+      ]),
+    ],
+  );
   return (
     <article className="section detail">
       <nav className="breadcrumb">
@@ -90,62 +100,12 @@ export default async function Detail({ params }: Props) {
       </div>
       <div className="detail-grid">
         <div>
-          <section className="gallery" aria-label="Mídias do imóvel">
-            {media.status === "fulfilled" && media.value.length ? (
-              media.value.map((m, index) => {
-                const url = safeUrl(m.original_url);
-                if (!url) return null;
-                const image =
-                  ["image", "floor_plan"].includes(m.kind) &&
-                  (new URL(url).hostname === "ik.imagekit.io" || allowed.includes(new URL(url).hostname));
-                return (
-                  <figure key={m.id}>
-                    {image ? (
-                      <MediaImage
-                        src={url}
-                        alt={
-                          m.kind === "floor_plan"
-                            ? "Planta do imóvel"
-                            : `${m.is_cover ? "Capa" : `Foto ${index + 1}`} do imóvel`
-                        }
-                        width={m.width ?? 1000}
-                        height={m.height ?? 680}
-                      />
-                    ) : (
-                      <a
-                        className="button secondary"
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Abrir{" "}
-                        {
-                          {
-                            image: "imagem",
-                            floor_plan: "planta",
-                            video: "vídeo",
-                            document: "documento",
-                          }[m.kind]
-                        }{" "}
-                        na origem <ArrowUpRight size={17} />
-                      </a>
-                    )}
-                    <figcaption>{m.is_cover ? "Capa · " : ""}{m.attribution}</figcaption>
-                  </figure>
-                );
-              })
-            ) : (
-              <div className="gallery-empty">
-                <House size={90} strokeWidth={0.6} />
-                <p>
-                  {media.status === "rejected"
-                    ? "Não foi possível carregar as mídias."
-                    : "Nenhuma fotografia disponível."}
-                </p>
-                <span>Todos os detalhes disponíveis estão abaixo.</span>
-              </div>
-            )}
-          </section>
+          <PropertyGallery
+            title={p.title}
+            photos={gallery.photos}
+            attachments={gallery.attachments}
+            failed={media.status === "rejected"}
+          />
           <section className="detail-section">
             <h2>Um pouco mais sobre este lugar</h2>
             <PropertyFeatures

@@ -88,3 +88,7 @@ O Git local foi inicializado para este frontend. Nenhum remoto, commit ou deploy
 ## Revisão e aprovação administrativa
 
 Acesse **Minha conta → Revisar anúncios** com `role=admin`. A fila está em `/admin/anuncios` e a revisão individual em `/admin/anuncios/[id]`. Usa a sessão existente, sem mocks de execução, com validação de permissão no servidor, controle de versão por fingerprint e invalidação da busca pública após publicação. Veja [contrato, segurança e operação](docs/admin-review.md). Para lint: `npm run lint`. Para validar o cache no build de produção: `PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e`.
+
+## Galeria pública
+
+O detalhe usa carrossel Embla, álbum em mosaico na ação **Ver todas** e ampliação com zoom em tela cheia via Yet Another React Lightbox. Créditos, plantas e regras de autorização de mídia são preservados. [Referências e decisões de UX](docs/gallery-ux.md).
