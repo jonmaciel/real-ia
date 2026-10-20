@@ -1,0 +1,926 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ListingsPlatform Phase 1 API",
+    "version": "1.0.0",
+    "description": "Envelope: {data: object or array}; listing search also returns meta {page,per_page,has_more}. Error envelope: {error: {code,request_id}} or validation_failed with details. No ingestion, AI, voice, history or admin write API yet. All requests are JSON. Monetary decimals serialize as strings. Authentication endpoints: 20 requests per IP per 15 minutes; all endpoints: 120 requests per minute via host cache."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "paths": {
+    "/api/v1/listings-platform/categories": {
+      "get": {
+        "summary": "Read up to 200 categories and their schemas",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/listings-platform/listings": {
+      "get": {
+        "summary": "Public listing search; unknown filters return 400, prices use the listing price basis. Specify currency and price_type is returned for interpretation.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "neighborhood",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "listing_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "availability",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recent",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "recent"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/listings-platform/search": {
+      "get": {
+        "summary": "Public listing search; unknown filters return 400, prices use the listing price basis. Specify currency and price_type is returned for interpretation.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "neighborhood",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "listing_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "availability",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recent",
+                "price_asc",
+                "price_desc"
+              ],
+              "default": "recent"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/listings-platform/listings/{id}": {
+      "get": {
+        "summary": "Public listing detail; private coordinates omitted",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/listings-platform/listings/{id}/sources": {
+      "get": {
+        "summary": "Original advertisement URLs, prices and availability",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/listings-platform/listings/{id}/media": {
+      "get": {
+        "summary": "Externally hosted media explicitly licensed for publication",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/listings-platform/auth/register": {
+      "post": {
+        "summary": "Register independent member; sends verification email",
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "password_confirmation": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "required": [
+                  "name",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings-platform/auth/login": {
+      "post": {
+        "summary": "Login verified account; returns data.token and expires_in (604800 seconds)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings-platform/auth/verify": {
+      "post": {
+        "summary": "Consume email verification token",
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings-platform/auth/password/forgot": {
+      "post": {
+        "summary": "Request reset email; always accepted for syntactically present email",
+        "responses": {
+          "202": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings-platform/auth/password/reset": {
+      "post": {
+        "summary": "Consume reset token; revoke all account sessions",
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "password_confirmation": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "required": [
+                  "token",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings-platform/auth/logout": {
+      "post": {
+        "summary": "Revoke current session",
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [
+          {
+            "platformSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/listings-platform/auth/rotate": {
+      "post": {
+        "summary": "Replace current session atomically",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [
+          {
+            "platformSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/listings-platform/users/me": {
+      "get": {
+        "summary": "Read own safe profile",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [
+          {
+            "platformSession": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Update own name",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [
+          {
+            "platformSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Permanently delete own platform account and sessions",
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden origin or unverified email"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation failed or invalid/expired token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [
+          {
+            "platformSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "required": [
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "platformSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Expiring, revocable platform session token; host JWTs are not accepted."
+      }
+    }
+  }
+}
