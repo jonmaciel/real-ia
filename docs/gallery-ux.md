@@ -38,3 +38,11 @@ Os testes de contrato e Playwright usam mídias sintéticas apenas em `tests/moc
 Cobertura nova: ordenação por capa e posição, URLs inseguras/hosts bloqueados, plantas, carrossel/miniaturas/contador, álbum e retorno, ampliação/zoom, teclado/foco, arrastar, imagem única quebrada e ausência de mídia. As jornadas são executadas em desktop e viewport móvel.
 
 Resultados finais em 20/10/2026: **15 testes unitários/contrato e 42 jornadas Playwright passaram**, executados com build e servidor de produção. Incluem dez cenários novos da galeria, distribuídos entre desktop e celular. O gesto móvel usa eventos de toque reais do Chromium; o desktop usa arrastar com mouse. TypeScript passou e lint terminou sem erros, com um aviso já existente de `<img>` em `media-image.tsx`. As capturas do álbum e visualizador foram inspecionadas em ambas as larguras. Não foram medidas métricas de Core Web Vitals nem feita auditoria completa WCAG. As alterações permanecem locais até commit/push.
+
+## Refinamento de gestos — 20/10/2026
+
+O carrossel aceita rolagem horizontal de Magic Mouse/trackpad: acumula intenção (40 px), normaliza unidades e permite uma troca por gesto, aguardando 200 ms sem eventos antes de aceitar o próximo. A rolagem vertical da página e Ctrl+wheel (pinça do navegador) permanecem livres. O listener não passivo é restrito ao viewport e removido ao desmontar.
+
+No visualizador, rolagem vertical controla zoom; rolagem horizontal navega quando a imagem está sem zoom. Quando ampliada, o arraste explora a imagem. Pinça, duplo clique, botões de zoom, teclado e tela cheia nativa continuam disponíveis pela biblioteca. A imagem ocupa a janela ao clicar no carrossel; fullscreen nativo é uma ação explícita por compatibilidade entre navegadores.
+
+Verificação desta revisão: build, TypeScript e lint passaram (um aviso preexistente de `<img>`); 15 testes unitários passaram. Playwright: 12 jornadas da galeria passaram, com dois cenários de mouse omitidos no projeto móvel; duas jornadas adicionais confirmaram duplo clique no desktop e pinça com dois pontos de toque no Chromium móvel. A navegação horizontal foi exercitada com eventos de wheel e inércia simulada, sem teste físico de Magic Mouse ou Safari/iOS.

@@ -92,6 +92,7 @@ export default function GalleryLightbox({
           <p role="status">Não foi possível carregar esta imagem.</p>
         ),
       }}
+      zoom={{ scrollToZoom: true, maxZoomPixelRatio: 2, doubleClickMaxStops: 1 }}
       captions={{ descriptionMaxLines: 3 }}
     />
   );

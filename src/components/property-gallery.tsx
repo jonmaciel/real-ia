@@ -61,6 +61,38 @@ export function PropertyGallery({
       api.off("reInit", sync);
     };
   }, [api, sync]);
+  // One deliberate horizontal gesture advances one photo. Ignore momentum until
+  // the device goes idle; vertical scrolling and browser pinch remain native.
+  useEffect(() => {
+    if (!api) return;
+    const viewport = api.rootNode();
+    let distance = 0;
+    let advanced = false;
+    let idle: ReturnType<typeof setTimeout>;
+    function wheel(event: WheelEvent) {
+      if (event.ctrlKey || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      clearTimeout(idle);
+      idle = setTimeout(() => {
+        distance = 0;
+        advanced = false;
+      }, 200);
+      const forward = event.deltaX > 0;
+      if (!advanced && !(forward ? api!.canScrollNext() : api!.canScrollPrev())) return;
+      event.preventDefault();
+      if (advanced) return;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientWidth : 1;
+      distance += event.deltaX * unit;
+      if (Math.abs(distance) < 40) return;
+      advanced = true;
+      if (distance > 0) api!.scrollNext();
+      else api!.scrollPrev();
+    }
+    viewport.addEventListener("wheel", wheel, { passive: false });
+    return () => {
+      clearTimeout(idle);
+      viewport.removeEventListener("wheel", wheel);
+    };
+  }, [api]);
   function view(index: number) {
     api?.scrollTo(index, true);
     setCurrent(index);

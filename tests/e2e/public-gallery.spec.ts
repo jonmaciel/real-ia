@@ -182,3 +182,75 @@ test("arrastar troca a imagem sem abrir a ampliação", async ({
   await expect(page.locator(".gallery-current")).toContainText("2 de 8");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+test("gesto horizontal avança uma foto por gesto e preserva rolagem vertical", async ({ page }, info) => {
+  test.skip(!!info.project.use.isMobile, "Magic Mouse/trackpad requer ponteiro desktop; toque é testado separadamente.");
+  await images(page);
+  await detail(page);
+  const viewport = page.locator(".property-carousel-viewport");
+  await viewport.scrollIntoViewIfNeeded();
+  await viewport.hover();
+  // A Magic Mouse gesture includes several small momentum events.
+  await viewport.evaluate((node) => {
+    for (const deltaX of [12, 18, 20, 14, 8, 3])
+      node.dispatchEvent(new WheelEvent("wheel", { deltaX, bubbles: true, cancelable: true }));
+  });
+  await expect(page.locator(".gallery-current")).toContainText("2 de 8");
+  expect(await viewport.evaluate((node) => {
+    const event = new WheelEvent("wheel", { deltaY: 100, bubbles: true, cancelable: true });
+    node.dispatchEvent(event);
+    return event.defaultPrevented;
+  })).toBe(false);
+  // Wait for gesture idle, then a distinct physical wheel gesture goes back.
+  await page.waitForTimeout(250);
+  await page.mouse.wheel(-100, 0);
+  await expect(page.locator(".gallery-current")).toContainText("1 de 8");
+});
+
+test("foto ampliada permite zoom real e gesto horizontal entre imagens", async ({ page }, info) => {
+  test.skip(!!info.project.use.isMobile, "Magic Mouse/trackpad requer ponteiro desktop; toque é testado separadamente.");
+  await images(page);
+  await detail(page);
+  await page.getByRole("button", { name: "Ampliar capa · foto 1", exact: true }).click();
+  const viewer = page.getByRole("dialog", { name: "Imagem em tela cheia" });
+  const image = viewer.locator(".yarl__slide_current img");
+  await expect(image).toBeVisible();
+  await image.hover();
+  await page.mouse.wheel(0, -200);
+  await expect(viewer.getByRole("button", { name: "Reduzir imagem", exact: true })).toBeEnabled();
+  await viewer.getByRole("button", { name: "Reduzir imagem", exact: true }).click();
+  await expect(viewer.getByRole("button", { name: "Reduzir imagem", exact: true })).toBeDisabled();
+  await image.hover();
+  // Native inertial swipe has an intent event followed by movement events.
+  for (const delta of [80, 250, 250]) {
+    await page.mouse.wheel(delta, 0);
+    await page.waitForTimeout(40);
+  }
+  await expect(viewer.locator(".yarl__slide_current .yarl__slide_description")).toContainText("Foto 2");
+});
+
+test("zoom por duplo clique ou pinça amplia a fotografia", async ({ page }, info) => {
+  await images(page);
+  await detail(page);
+  await page.getByRole("button", { name: "Ampliar capa · foto 1", exact: true }).click();
+  const viewer = page.getByRole("dialog", { name: "Imagem em tela cheia" });
+  const image = viewer.locator(".yarl__slide_current img");
+  await expect(image).toBeVisible();
+  if (info.project.use.isMobile) {
+    const box = await image.boundingBox();
+    if (!box) throw new Error("Fotografia não disponível");
+    const touch = await page.context().newCDPSession(page);
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    const points = (radius: number) => [
+      { x: x - radius, y, id: 0 }, { x: x + radius, y, id: 1 },
+    ];
+    await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: points(30) });
+    for (let radius = 35; radius <= 100; radius += 5)
+      await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: points(radius) });
+    await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await touch.detach();
+  } else {
+    await image.dblclick();
+  }
+  await expect(viewer.getByRole("button", { name: "Reduzir imagem", exact: true })).toBeEnabled();
+});
