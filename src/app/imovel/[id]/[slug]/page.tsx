@@ -98,15 +98,22 @@ export default async function Detail({ params }: Props) {
         </div>
         <ShareButton />
       </div>
+      <nav className="detail-navigation" aria-label="Seções do imóvel">
+        <a href="#fotos">Fotos</a>
+        <a href="#sobre">Sobre o imóvel</a>
+        <a href="#fontes">Anúncios de origem</a>
+      </nav>
       <div className="detail-grid">
         <div>
-          <PropertyGallery
-            title={p.title}
-            photos={gallery.photos}
-            attachments={gallery.attachments}
-            failed={media.status === "rejected"}
-          />
-          <section className="detail-section">
+          <div id="fotos" className="detail-anchor">
+            <PropertyGallery
+              title={p.title}
+              photos={gallery.photos}
+              attachments={gallery.attachments}
+              failed={media.status === "rejected"}
+            />
+          </div>
+          <section id="sobre" className="detail-section detail-anchor">
             <h2>Um pouco mais sobre este lugar</h2>
             <PropertyFeatures
               property={p}
@@ -118,7 +125,11 @@ export default async function Detail({ params }: Props) {
               {p.description || "O anunciante não informou uma descrição."}
             </p>
           </section>
-          <section className="detail-section">
+          <section
+            id="fontes"
+            className="detail-section detail-anchor"
+            tabIndex={-1}
+          >
             <h2>Onde encontramos este imóvel</h2>
             <p>
               Preço e disponibilidade devem ser confirmados com o anunciante. As
@@ -174,6 +185,9 @@ export default async function Detail({ params }: Props) {
           <p>
             {modality(p.listing_type)} · {p.currency ?? "Moeda não informada"}
           </p>
+          <a className="button primary source-shortcut" href="#fontes">
+            Consultar anúncios de origem <ArrowUpRight size={17} />
+          </a>
           <hr />
           <p>
             Condomínio, IPTU e outras taxas não informados. O preço anunciado

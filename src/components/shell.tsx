@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowUpRight, House, Menu } from "lucide-react";
+import { ArrowUpRight, House } from "lucide-react";
+import { MobileNavigation } from "./mobile-navigation";
 export function SiteHeader() {
   return (
     <header className="site-header">
@@ -17,16 +18,7 @@ export function SiteHeader() {
       <Link className="account-link" href="/conta">
         Minha conta <ArrowUpRight size={16} />
       </Link>
-      <details className="mobile-nav">
-        <summary aria-label="Abrir navegação">
-          <Menu />
-        </summary>
-        <nav aria-label="Navegação móvel">
-          <Link href="/buscar?listing_type=sale">Comprar</Link>
-          <Link href="/buscar?listing_type=rental">Alugar</Link>
-          <Link href="/conta">Minha conta</Link>
-        </nav>
-      </details>
+      <MobileNavigation />
     </header>
   );
 }

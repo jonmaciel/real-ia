@@ -36,3 +36,12 @@ A suíte atual passou com **13 testes de unidade/contrato e 28 jornadas desktop/
 ## Ampliação: galeria pública (20/10/2026)
 
 Validação atual: **15 testes unitários/contrato e 42 jornadas Playwright passaram** no build de produção, com desktop e viewport móvel. TypeScript e build passaram; lint sem erros, mantendo um aviso existente de imagem externa. A cobertura nova inclui capa/ordem, álbum, plantas, fullscreen/zoom, foco, gestos de toque e mouse, falhas de imagem e ausência de mídia. [Referências e decisões](gallery-ux.md).
+
+## Refinamento de navegação e compartilhamento — 20/10/2026
+
+- Detalhe: atalhos Fotos/Sobre/Anúncios de origem e ação junto ao preço para consultar as fontes. Âncoras nativas, alvos confortáveis e sem novas requisições.
+- Menu móvel: fecha ao escolher um link, tocar fora ou pressionar Escape (com retorno de foco ao acionador); inclui Como funciona.
+- Compartilhar: cancelamento não é tratado como falha; operação em andamento bloqueia repetição; falha do compartilhamento/clipboard oferece campo selecionável para cópia manual. O link compartilhado não inclui a âncora de seção.
+- `npm run lint`: zero erros, um aviso preexistente em `media-image.tsx`. `npm run typecheck`, `npm test` (15 testes) e build passaram.
+- Regressão Playwright com build de produção: 50 passaram, 3 omitidos por tipo de dispositivo, 1 timeout no teste novo que tentava clicar sob o menu. Corrigido o ponto de clique externo do teste; reexecução de `tests/e2e/ux.spec.ts`: 5 passaram e 1 omitido (menu móvel no desktop). Os 46 cenários anteriores passaram na regressão; as cinco novas jornadas passaram na reexecução.
+- Testes usam o servidor de contrato isolado. Nenhum dado de produção alterado; sem auditoria completa WCAG ou medição de Core Web Vitals.

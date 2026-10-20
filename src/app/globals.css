@@ -2099,3 +2099,50 @@ textarea {
     --yarl__animation_duration: 0ms;
   }
 }
+
+/* Detail wayfinding uses the same destinations at every screen size. */
+.detail-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.detail-navigation a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  font-weight: 600;
+}
+.detail-navigation a:hover {
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+.detail-anchor {
+  scroll-margin-top: 24px;
+}
+.source-shortcut {
+  width: 100%;
+  margin-top: 16px;
+  text-align: center;
+  white-space: normal;
+}
+.share-control {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.share-fallback {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+  max-width: 320px;
+}
+.share-fallback input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+.share-fallback small {
+  color: var(--muted);
+}
