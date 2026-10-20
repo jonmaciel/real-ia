@@ -65,7 +65,7 @@ export default async function Detail({ params }: Props) {
     getMedia(id),
     realEstateCategory(),
   ]);
-  const allowed = (process.env.MEDIA_ALLOWED_HOSTS ?? "")
+  const allowed = (process.env.MEDIA_ALLOWED_HOSTS ?? "ik.imagekit.io")
     .split(",")
     .filter(Boolean);
   return (
@@ -97,7 +97,7 @@ export default async function Detail({ params }: Props) {
                 if (!url) return null;
                 const image =
                   ["image", "floor_plan"].includes(m.kind) &&
-                  allowed.includes(new URL(url).hostname);
+                  (new URL(url).hostname === "ik.imagekit.io" || allowed.includes(new URL(url).hostname));
                 return (
                   <figure key={m.id}>
                     {image ? (

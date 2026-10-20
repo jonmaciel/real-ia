@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PropertyCover } from "./property-cover";
 import { ArrowUpRight, House, MapPin, BedDouble, Columns3 } from "lucide-react";
 import type { Category, Listing } from "@/lib/contracts";
 import {
@@ -53,11 +54,8 @@ export function PropertyCard({
         className="card-media"
         aria-label={`Ver ${property.title}`}
       >
-        <div className="architecture-lines" aria-hidden="true">
-          <House strokeWidth={0.65} size={82} />
-        </div>
+        <PropertyCover src={property.cover_url} alt={property.title} />
         <span className="listing-badge">{modality(property.listing_type)}</span>
-        <span className="no-photo">Fotografia não disponível</span>
         <span className="card-arrow">
           <ArrowUpRight size={20} />
         </span>

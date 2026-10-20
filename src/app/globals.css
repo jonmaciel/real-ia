@@ -1656,3 +1656,7 @@ textarea {
     grid-row: auto;
   }
 }
+
+.property-cover { width: 100%; height: 100%; object-fit: cover; display: block; }
+.review-placeholder { overflow: hidden; }
+.review-placeholder .property-cover { max-height: 420px; object-fit: contain; }

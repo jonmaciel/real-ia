@@ -6,6 +6,7 @@ export const listingSchema = z.object({
   category_id: id,
   title: z.string(),
   description: optional,
+  cover_url: optional,
   listing_type: z.string(),
   price: z
     .string()

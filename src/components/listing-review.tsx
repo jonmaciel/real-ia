@@ -1,8 +1,9 @@
 "use client";
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { PropertyCover } from "./property-cover";
 import { useRouter } from "next/navigation";
-import { House, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { z } from "zod";
 import {
   adminDetailSchema,
@@ -181,8 +182,7 @@ export function ListingReview({
         <div>
           <section className="panel">
             <div className="review-placeholder">
-              <House size={60} strokeWidth={0.7} />
-              <p>Fotografia não disponível na revisão.</p>
+              <PropertyCover src={listing.media?.find((asset) => asset.processing_status === "completed")?.hosted_url} alt={listing.title} />
             </div>
             <h2>Dados do anúncio</h2>
             <p>{modality(listing.listing_type)}</p>
