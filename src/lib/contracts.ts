@@ -14,6 +14,7 @@ export const listingSchema = z.object({
   currency: optional,
   price_type: optional,
   availability: optional,
+  real_estate: z.record(z.string(), z.unknown()).nullish(),
   structured_attributes: z.record(z.string(), z.unknown()).nullish(),
   city: optional,
   neighborhood: optional,

@@ -37,7 +37,7 @@ test("preserva correspondência exata e valores monetários", () => {
     money("1234567890123456.70", "BRL"),
     "R$ 1.234.567.890.123.456,70",
   );
-  assert.equal(money(null), "Preço sob consulta");
+  assert.equal(money(null), "Preço não informado");
   assert.equal(period("fixed"), "");
   assert.equal(period("monthly"), "/mês");
   assert.equal(money("10.00", "USD"), "USD 10,00");

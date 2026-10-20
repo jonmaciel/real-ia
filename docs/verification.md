@@ -28,3 +28,7 @@ A cópia local do backend estava limpa no commit f50571d. Foram inspecionados do
 Não foram exercitados SMTP real, migrações de produção, tráfego/capacidade, auditoria completa WCAG, Core Web Vitals, hosts reais de mídia ou preços de anúncios reais. O cookie Secure é configurado por NODE_ENV em produção; as jornadas locais HTTP validam HttpOnly e SameSite, sem simular TLS de produção.
 
 A inspeção visual não equivale a uma auditoria de acessibilidade. O teste de teclado cobre o acesso inicial; a aplicação mantém controles HTML nativos e foco visível, mas revisão assistiva completa continua sendo uma etapa de lançamento.
+
+## Ampliação: revisão administrativa (20/10/2026)
+
+A suíte atual passou com **13 testes de unidade/contrato e 28 jornadas desktop/mobile**; o servidor Playwright foi iniciado com `npm run build && npm start` para verificar a invalidação do cache em produção. Lint passou com um aviso existente de `<img>` e TypeScript passou. A rota administrativa real, sem credenciais, respondeu 401. Detalhes, limitações e avisos das ferramentas de desenvolvimento: [revisão administrativa](admin-review.md).

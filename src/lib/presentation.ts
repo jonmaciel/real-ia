@@ -22,7 +22,7 @@ export function money(
   value: string | null | undefined,
   currency: string | null | undefined = "BRL",
 ) {
-  if (value == null) return "Preço sob consulta";
+  if (value == null) return "Preço não informado";
   if (!/^\d+(\.\d+)?$/.test(value)) return "Preço indisponível";
   const [whole, fraction = ""] = value.split(".");
   const numeric = BigInt(whole);
@@ -76,6 +76,12 @@ export function features(p: Listing, category?: Category) {
     items.push(`${a.bedrooms} quarto${a.bedrooms === 1 ? "" : "s"}`);
   if (a.balcony === true && (!schema || schema.balcony?.type === "boolean"))
     items.push("Varanda");
+  const area = a.reported_area_sqm ?? p.real_estate?.reported_area_sqm;
+  if (
+    (typeof area === "number" && Number.isFinite(area) && area >= 0) ||
+    (typeof area === "string" && /^\d+(\.\d+)?$/.test(area))
+  )
+    items.push(`Área informada: ${String(area).replace(".", ",")} m²`);
   return items;
 }
 export function date(value: string | null | undefined) {
@@ -88,15 +94,15 @@ export function date(value: string | null | undefined) {
       }).format(d);
 }
 
-export function availability(value: string) {
+export function availability(value: string | null | undefined) {
   return (
     (
       {
-        unknown: "Não informada",
+        unknown: "Disponibilidade não confirmada",
         available: "Disponível",
         unavailable: "Indisponível",
         reserved: "Reservado",
       } as Record<string, string>
-    )[value] ?? value
+    )[value ?? "unknown"] ?? value
   );
 }

@@ -210,6 +210,7 @@ export default async function Detail({ params }: Props) {
         <aside className="price-panel">
           <span className="eyebrow">PREÇO ANUNCIADO</span>
           <PropertyPrice property={p} />
+          <p>{availability(p.availability)}</p>
           <p>
             {modality(p.listing_type)} · {p.currency ?? "Moeda não informada"}
           </p>

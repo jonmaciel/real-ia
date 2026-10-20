@@ -119,7 +119,7 @@ test("CSRF e métodos não autorizados são bloqueados", async ({ request }) => 
 });
 test("foco de teclado e layout sem rolagem horizontal", async ({
   page,
-}, testInfo) => {
+}) => {
   await page.goto("/");
   await page.keyboard.press("Tab");
   await expect(

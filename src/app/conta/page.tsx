@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -40,6 +41,15 @@ export default async function Account() {
       <span className="eyebrow">SEU ESPAÇO</span>
       <h1>Olá, {profile.name}.</h1>
       <p>{profile.email}</p>
+      {profile.role === "admin" && (
+        <Link
+          href="/admin/anuncios"
+          prefetch={false}
+          className="button secondary"
+        >
+          Revisar anúncios
+        </Link>
+      )}
       <div className="account-grid">
         <section className="panel">
           <h2>Seu perfil</h2>

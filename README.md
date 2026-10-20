@@ -84,3 +84,7 @@ Use hospedagem Node compatível com Next.js (por exemplo, Vercel ou contêiner N
 Faça smoke test separado com GET /categories, /search?category=real-estate e um ID público conhecido antes de apontar tráfego. Testes de contrato não provam implantação real, entrega de e-mail ou validade dos anúncios.
 
 O Git local foi inicializado para este frontend. Nenhum remoto, commit ou deploy foi criado. Para revisar a aparência sem backend: `DEMO_MODE=true npm run dev`; para integração real, mantenha DEMO_MODE=false. A prévia usada no QA é temporária e pode ser reiniciada com esses comandos.
+
+## Revisão e aprovação administrativa
+
+Acesse **Minha conta → Revisar anúncios** com `role=admin`. A fila está em `/admin/anuncios` e a revisão individual em `/admin/anuncios/[id]`. Usa a sessão existente, sem mocks de execução, com validação de permissão no servidor, controle de versão por fingerprint e invalidação da busca pública após publicação. Veja [contrato, segurança e operação](docs/admin-review.md). Para lint: `npm run lint`. Para validar o cache no build de produção: `PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e`.

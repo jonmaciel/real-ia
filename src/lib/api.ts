@@ -34,7 +34,7 @@ export async function request(path: string, init: RequestInit = {}) {
       redirect: "error",
       ...(init.headers || init.method
         ? { cache: "no-store" as const }
-        : { next: { revalidate: 60 } }),
+        : { next: { revalidate: 60, tags: ["listings-public"] } }),
     });
   } catch {
     throw new ApiError(503);

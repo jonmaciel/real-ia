@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, House, MapPin, BedDouble, Columns3 } from "lucide-react";
 import type { Category, Listing } from "@/lib/contracts";
 import {
+  availability,
   features,
   modality,
   money,
@@ -12,7 +13,7 @@ export function PropertyPrice({ property }: { property: Listing }) {
   return (
     <div className="property-price">
       {money(property.price, property.currency)}{" "}
-      <small>{period(property.price_type)}</small>
+      <small>{property.price != null ? period(property.price_type) : ""}</small>
     </div>
   );
 }
@@ -25,9 +26,14 @@ export function PropertyFeatures({
 }) {
   return (
     <div className="features">
-      {features(property, category).map((f, i) => (
+      {features(property, category).map((f) => (
         <span key={f}>
-          {i === 0 ? <BedDouble size={17} /> : <Columns3 size={17} />} {f}
+          {f.includes("quarto") ? (
+            <BedDouble size={17} />
+          ) : (
+            <Columns3 size={17} />
+          )}{" "}
+          {f}
         </span>
       ))}
     </div>
@@ -67,6 +73,9 @@ export function PropertyCard({
         </h3>
         <PropertyFeatures property={property} category={category} />
         <PropertyPrice property={property} />
+        <p className="property-availability">
+          {availability(property.availability)}
+        </p>
       </div>
     </article>
   );
