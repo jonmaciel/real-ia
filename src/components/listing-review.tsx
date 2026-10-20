@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { PropertyCover } from "./property-cover";
+import { PhotoGallery } from "./photo-gallery";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { z } from "zod";
@@ -181,9 +181,7 @@ export function ListingReview({
       <div className="detail-grid admin-review">
         <div>
           <section className="panel">
-            <div className="review-placeholder">
-              <PropertyCover src={listing.media?.find((asset) => asset.processing_status === "completed")?.hosted_url} alt={listing.title} />
-            </div>
+            <PhotoGallery photos={listing.media ?? []} title={listing.title} />
             <h2>Dados do anúncio</h2>
             <p>{modality(listing.listing_type)}</p>
             <PropertyPrice property={listing} />

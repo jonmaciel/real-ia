@@ -70,6 +70,8 @@ export const mediaSchema = z.object({
   kind: z.enum(["image", "video", "floor_plan", "document"]),
   original_url: z.string(),
   attribution: optional,
+  is_cover: z.boolean().optional(),
+  position: z.number().int().nonnegative().optional(),
   width: z.number().nullish(),
   height: z.number().nullish(),
 });

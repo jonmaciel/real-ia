@@ -22,6 +22,10 @@ const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
   structured_attributes: { reported_area_sqm: 82.5 },
   real_estate: null,
   publication_review: {} as Record<string, unknown>,
+  media: id === 101 ? [
+    { id: 1, hosted_url: "https://ik.imagekit.io/test/gallery-one.jpg", is_cover: false, position: 0, processing_status: "completed" },
+    { id: 2, hosted_url: "https://ik.imagekit.io/test/gallery-cover.jpg", is_cover: true, position: 1, processing_status: "completed" },
+  ] : [],
   sources: [
     {
       id: id * 10 + 1,

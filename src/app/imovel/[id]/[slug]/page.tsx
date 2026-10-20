@@ -92,7 +92,7 @@ export default async function Detail({ params }: Props) {
         <div>
           <section className="gallery" aria-label="Mídias do imóvel">
             {media.status === "fulfilled" && media.value.length ? (
-              media.value.map((m) => {
+              media.value.map((m, index) => {
                 const url = safeUrl(m.original_url);
                 if (!url) return null;
                 const image =
@@ -106,7 +106,7 @@ export default async function Detail({ params }: Props) {
                         alt={
                           m.kind === "floor_plan"
                             ? "Planta do imóvel"
-                            : "Imagem autorizada do imóvel"
+                            : `${m.is_cover ? "Capa" : `Foto ${index + 1}`} do imóvel`
                         }
                         width={m.width ?? 1000}
                         height={m.height ?? 680}
@@ -130,7 +130,7 @@ export default async function Detail({ params }: Props) {
                         na origem <ArrowUpRight size={17} />
                       </a>
                     )}
-                    {m.attribution && <figcaption>{m.attribution}</figcaption>}
+                    <figcaption>{m.is_cover ? "Capa · " : ""}{m.attribution}</figcaption>
                   </figure>
                 );
               })
