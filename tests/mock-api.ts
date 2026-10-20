@@ -164,6 +164,8 @@ createServer(async (req, res) => {
     return send(path.endsWith("forgot") ? 202 : 204);
   }
   if (path === "/auth/login") {
+    if (b.email === "invalidrequest@example.com")
+      return send(400, { error: { code: "invalid_request" } });
     if (b.email === "naoverificado@example.com")
       return send(403, { error: { code: "email_unverified" } });
     if (b.password !== "uma-senha-muito-segura")

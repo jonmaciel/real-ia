@@ -6,7 +6,7 @@ const flows = {
   login: {
     title: "Bem-vindo de volta.",
     description:
-      "Entre com sua conta Morada. Seu e-mail precisa estar verificado.",
+      "Acesse seus favoritos e encontre seu próximo lugar.",
   },
   register: {
     title: "Seu próximo capítulo.",
@@ -40,7 +40,7 @@ export default async function AuthPage({
   if (!Object.hasOwn(flows, flow)) notFound();
   const key = flow as keyof typeof flows;
   return (
-    <section className="auth-page">
+    <section className={`auth-page auth-page-${key}`}>
       <div className="auth-intro">
         <span className="eyebrow">BOM TER VOCÊ POR AQUI</span>
         <h1>
@@ -59,11 +59,11 @@ export default async function AuthPage({
           <AuthenticationForm action={key} />
         )}
         <nav className="auth-links" aria-label="Acesso à conta">
-          <Link href="/auth/login">Entrar</Link>
-          <Link href="/auth/register">Criar conta</Link>
-          <Link href="/auth/verify">Verificar e-mail</Link>
-          <Link href="/auth/forgot">Esqueci a senha</Link>
-          <Link href="/auth/reset">Tenho um token de redefinição</Link>
+          {key !== "login" && <Link href="/auth/login">Voltar para entrar</Link>}
+          {key === "login" && <Link href="/auth/forgot">Esqueci minha senha</Link>}
+          {key === "login" && <Link href="/auth/register">Criar conta</Link>}
+          {key === "register" && <Link href="/auth/verify">Confirmar meu e-mail</Link>}
+          {key === "forgot" && <Link href="/auth/reset">Já recebi o token</Link>}
         </nav>
       </div>
     </section>

@@ -133,14 +133,18 @@ export async function getMedia(id: string) {
         .object({ data: z.array(mediaSchema) })
         .parse(await request(`/listings/${encodeURIComponent(id)}/media`)).data;
 }
-export function errorMessage(e: unknown) {
+export function errorMessage(e: unknown, context: "catalog" | "auth" = "catalog") {
+  if (e instanceof ApiError && e.code === "email_unverified")
+    return "Seu e-mail ainda não foi verificado. Confirme seu e-mail para entrar.";
   if (e instanceof ApiError && e.code === "invalid_credentials")
     return "E-mail ou senha inválidos. Confira os dados informados.";
   if (e instanceof ApiError)
     return (
       (
         {
-          400: "Os filtros enviados são inválidos.",
+          400: context === "auth"
+            ? "Confira os dados informados e tente novamente."
+            : "Os filtros enviados são inválidos.",
           401: "Sua sessão expirou. Entre novamente.",
           403: "Acesso não autorizado. Confira a verificação do e-mail.",
           404: "Este recurso não está disponível.",

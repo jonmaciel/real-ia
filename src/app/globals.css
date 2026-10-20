@@ -110,9 +110,7 @@ em {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space);
-  max-width: 1600px;
-  margin: auto;
+  padding: 0 max(var(--space), calc((100% - 1600px) / 2 + var(--space)));
   border-bottom: 1px solid #e6e7df;
 }
 .brand {
@@ -715,10 +713,8 @@ textarea {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 25px;
-  padding: 45px var(--space) 26px;
+  padding: 45px max(var(--space), calc((100% - 1600px) / 2 + var(--space))) 26px;
   background: #e9ede4;
-  max-width: 1600px;
-  margin: auto;
 }
 .footer .brand {
   font-size: 28px;
@@ -967,7 +963,19 @@ textarea {
   font-size: 26px;
 }
 .auth-card > p {
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.auth-form label > span {
+  font-size: 14px;
+}
+.auth-form input {
+  font-size: 16px;
+  min-height: 48px;
+}
+.auth-form .button {
+  min-height: 48px;
 }
 .auth-form {
   display: flex;
@@ -980,7 +988,10 @@ textarea {
 }
 .auth-form > p {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
+}
+.auth-form > p:empty {
+  display: none;
 }
 .auth-links {
   display: flex;
@@ -989,7 +1000,8 @@ textarea {
   border-top: 1px solid var(--border);
   padding-top: 20px;
   margin-top: 20px;
-  font-size: 11px;
+  font-size: 14px;
+  justify-content: space-between;
 }
 .auth-links a {
   text-decoration: underline;
@@ -1090,15 +1102,6 @@ textarea {
   }
 }
 @media (min-width: 1600px) {
-  body {
-    background: #f5f5ed;
-  }
-  main,
-  .site-header {
-    background: var(--paper);
-    max-width: 1600px;
-    margin: auto;
-  }
   .search-section {
     padding-top: 1px;
   }
@@ -1381,6 +1384,14 @@ textarea {
   }
   .auth-intro h1 {
     font-size: 33px;
+  }
+  .auth-page-login {
+    min-height: auto;
+    padding-top: 28px;
+    padding-bottom: 40px;
+  }
+  .auth-page-login .auth-intro {
+    display: none;
   }
   .auth-intro p {
     display: none;

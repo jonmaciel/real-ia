@@ -91,6 +91,6 @@ export async function POST(
     if (e instanceof z.ZodError)
       return fail(e.issues.map((i) => i.message).join(" "), 422);
     if (e instanceof SyntaxError) return fail("Dados inválidos.", 400);
-    return fail(errorMessage(e), e instanceof ApiError ? e.status : 502);
+    return fail(errorMessage(e, "auth"), e instanceof ApiError ? e.status : 502);
   }
 }

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authSchemas, type AuthAction } from "@/lib/auth-contracts";
@@ -152,6 +153,9 @@ export function AuthenticationForm({
       >
         {message}
       </p>
+      {action === "login" && invalid && message.includes("verificado") && (
+        <Link href="/auth/verify">Confirmar meu e-mail</Link>
+      )}
     </form>
   );
 }
