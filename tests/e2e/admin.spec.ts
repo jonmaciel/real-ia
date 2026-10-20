@@ -46,7 +46,7 @@ test("apenas admin acessa fila, detalhe e aprovação", async ({
   await expect(
     page.getByRole("link", { name: "Revisar anúncios" }),
   ).toBeVisible();
-  const headers = { Origin: "http://localhost:3001" };
+  const headers = { Origin: new URL(page.url()).origin };
   expect(
     (await page.request.get("/api/admin/anuncios/101")).headers()[
       "cache-control"
