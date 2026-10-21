@@ -53,3 +53,17 @@ test("menu móvel fecha por Escape, clique fora e navegação entre modalidades"
   await expect(page).toHaveURL(/listing_type=rental/);
   await expect(menu).not.toHaveAttribute("open");
 });
+
+test("identidade editorial mantém busca e layout em celular desktop e ultrawide", async ({ page }, info) => {
+  for (const width of [390, 1440, 2560]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Encontre um lugar");
+    await expect(page.getByRole("img", { name: "Ilustração conceitual: diferentes caminhos se encontram em uma casa" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Buscar imóveis" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`editorial-${width}.png`), fullPage: true });
+    const footer = await page.locator(".footer").boundingBox();
+    expect(Math.round(footer!.width)).toBe(width);
+  }
+});

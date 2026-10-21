@@ -25,6 +25,7 @@ test("carrossel mostra capa, contador, miniaturas e atalhos sem criar lista vert
     name: "Mídias do imóvel",
     exact: true,
   });
+  await expect(gallery.locator(".gallery-expand")).toHaveCount(0);
   await expect(
     gallery.locator(".property-carousel-slide").first().locator("img"),
   ).toHaveAttribute("src", /public-2.jpg$/);

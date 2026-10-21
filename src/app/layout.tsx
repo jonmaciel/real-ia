@@ -4,6 +4,7 @@ import { demo } from "@/lib/api";
 import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/manrope";
 import "./globals.css";
+import "./editorial.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3001"),
   title: { default: "Morada — Encontre seu lugar", template: "%s | Morada" },

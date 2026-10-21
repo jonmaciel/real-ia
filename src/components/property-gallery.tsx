@@ -5,7 +5,6 @@ import useEmblaCarousel from "embla-carousel-react";
 import {
   ArrowLeft,
   ArrowRight,
-  Expand,
   Grid2X2,
   House,
   ArrowUpRight,
@@ -168,10 +167,7 @@ export function PropertyGallery({
                         alt={`${photoLabel(photo, index)} — ${title}`}
                         eager={index === 0}
                       />
-                      <span className="gallery-expand">
-                        <Expand size={17} />
-                        Ampliar
-                      </span>
+
                     </button>
                   </div>
                 ))}

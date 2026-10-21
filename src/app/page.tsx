@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DiscoveryAtlas } from "@/components/discovery-atlas";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -27,10 +28,10 @@ export default async function Home() {
   }
   return (
     <>
-      <section className="hero">
+      <section className="hero editorial-hero">
         <div className="hero-copy">
           <span className="eyebrow">
-            <span className="tiny-line" /> SEU PRÓXIMO CAPÍTULO COMEÇA AQUI
+            <span className="tiny-line" /> DESCOBERTA IMOBILIÁRIA, COM PERSPECTIVA
           </span>
           <h1>
             Encontre um lugar
@@ -38,38 +39,18 @@ export default async function Home() {
             que combine <em>com você.</em>
           </h1>
           <p>
-            Novas possibilidades. Escolhas mais claras.
-            <br />
-            Um jeito mais tranquilo de encontrar seu próximo lar.
+            Diferentes anúncios. Um ponto de partida.
+            Explore imóveis, conheça os detalhes e vá direto às fontes.
           </p>
           <div className="hero-footnote">
             <Compass size={18} />
-            <span>Seu lugar está entre as possibilidades.</span>
+            <span>Menos caminhos dispersos. Mais espaço para decidir.</span>
           </div>
         </div>
-        <div
-          className="hero-art"
-          aria-label="Ilustração arquitetônica de uma casa com jardim"
-          role="img"
-        >
-          <div className="sun" />
-          <div className="tree tree-one" />
-          <div className="tree tree-two" />
-          <div className="house-back" />
-          <div className="house-front">
-            <div className="house-window" />
-            <div className="house-door" />
-          </div>
-          <div className="garden" />
-          <span className="art-label">ESPAÇO PARA VIVER BEM</span>
-          <div className="art-caption">
-            Um lugar.
-            <br />
-            <i>Infinitas possibilidades.</i>
-          </div>
-        </div>
+        <DiscoveryAtlas />
       </section>
       <section className="search-section" aria-label="Busca de imóveis">
+        <div className="search-intro"><span className="eyebrow">01 / O PONTO DE PARTIDA</span><h2>Onde começa seu próximo capítulo?</h2></div>
         <ConventionalSearchBar />
       </section>
       <div className="trust-strip">
@@ -86,7 +67,7 @@ export default async function Home() {
       <section className="section recent">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">UM NOVO COMEÇO</span>
+            <span className="eyebrow">02 / NO RADAR</span>
             <h2>Seu próximo lugar pode estar aqui.</h2>
             <p>Explore os imóveis publicados recentemente.</p>
           </div>
@@ -106,7 +87,7 @@ export default async function Home() {
       </section>
       <section className="discovery-section">
         <div>
-          <span className="eyebrow">CADA MOMENTO, UMA MORADA</span>
+          <span className="eyebrow">03 / ESCOLHA SEU CAMINHO</span>
           <h2>Qual é o seu próximo passo?</h2>
           <p>
             Seja para criar raízes ou descobrir um novo bairro,
@@ -139,7 +120,7 @@ export default async function Home() {
       </section>
       <section className="section how-section" id="como-funciona">
         <div>
-          <span className="eyebrow">MENOS DÚVIDAS. MAIS CLAREZA.</span>
+          <span className="eyebrow">04 / DA DESCOBERTA À DECISÃO</span>
           <h2>
             Uma boa escolha começa
             <br />
