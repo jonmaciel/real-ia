@@ -24,6 +24,8 @@ import {
   PropertyFeatures,
   ErrorState,
 } from "@/components/properties";
+import { PropertyNeighborhood } from "@/components/property-neighborhood";
+import { publicCoordinates, publishedContact } from "@/lib/property-location";
 import { ShareButton } from "@/components/share";
 type Props = { params: Promise<{ id: string; slug: string }> };
 export async function generateMetadata({ params }: Props) {
@@ -78,6 +80,7 @@ export default async function Detail({ params }: Props) {
       ]),
     ],
   );
+  const contact = publishedContact(p.description);
   return (
     <article className="section detail">
       <nav className="breadcrumb">
@@ -101,6 +104,7 @@ export default async function Detail({ params }: Props) {
       <nav className="detail-navigation" aria-label="Seções do imóvel">
         <a href="#fotos">Fotos</a>
         <a href="#sobre">Sobre o imóvel</a>
+        <a href="#localizacao">Localização</a>
         <a href="#fontes">Anúncios de origem</a>
       </nav>
       <div className="detail-grid">
@@ -125,6 +129,11 @@ export default async function Detail({ params }: Props) {
               {p.description || "O anunciante não informou uma descrição."}
             </p>
           </section>
+          <PropertyNeighborhood
+            key={String(p.id)}
+            point={publicCoordinates(p)}
+            location={[p.neighborhood, p.city, p.region].filter(Boolean).join(" · ")}
+          />
           <section
             id="fontes"
             className="detail-section detail-anchor"
@@ -135,6 +144,14 @@ export default async function Detail({ params }: Props) {
               Preço e disponibilidade devem ser confirmados com o anunciante. As
               condições e os custos adicionais podem variar.
             </p>
+            <div className="published-contact">
+              <h3>Contato e endereço</h3>
+              {contact.phone && contact.telephone ? (
+                <p>Telefone informado na descrição: <a className="text-link" href={contact.telephone}>{contact.phone}</a></p>
+              ) : <p>Telefone de contato não informado. Consulte o anunciante pelo anúncio original.</p>}
+              {contact.address ? <p>Endereço informado na descrição: <strong>{contact.address}</strong></p> : <p>Endereço completo não informado. Confirme com o anunciante antes de visitar.</p>}
+              <small>Informações da descrição pública, sem verificação independente pelo Morada.</small>
+            </div>
             {sources.status === "fulfilled" ? (
               sources.value.length ? (
                 sources.value.map((s) => {

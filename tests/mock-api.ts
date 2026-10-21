@@ -200,7 +200,9 @@ createServer(async (req, res) => {
                   source: { id: 2, name: "Fonte de teste B" },
                 },
               ]
-            : p,
+            : match[1] === "4"
+              ? { ...p, latitude: "-25.43", longitude: "-49.27", description: "Imóvel sintético de contrato.\nTelefone: (41) 99999-1234\nEndereço: Rua de Teste, 123 - Curitiba" }
+              : p,
     });
   }
   if (

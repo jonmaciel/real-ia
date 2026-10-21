@@ -54,16 +54,35 @@ test("menu móvel fecha por Escape, clique fora e navegação entre modalidades"
   await expect(menu).not.toHaveAttribute("open");
 });
 
-test("identidade editorial mantém busca e layout em celular desktop e ultrawide", async ({ page }, info) => {
+test("portal moderno mantém busca e layout em celular desktop e ultrawide", async ({ page }, info) => {
   for (const width of [390, 1440, 2560]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Encontre um lugar");
-    await expect(page.getByRole("img", { name: "Ilustração conceitual: diferentes caminhos se encontram em uma casa" })).toBeVisible();
+    await expect(page.locator(".portal-hero-image")).toBeVisible();
+    await expect(page.getByText("Ambientação ilustrativa gerada por IA · não é um anúncio")).toBeVisible();
+    expect(await page.getByRole("heading", { level: 1 }).evaluate((node) => getComputedStyle(node).fontFamily)).not.toContain("Georgia");
     await expect(page.getByRole("button", { name: "Buscar imóveis" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: info.outputPath(`editorial-${width}.png`), fullPage: true });
+    await page.screenshot({ path: info.outputPath(`portal-${width}.png`), fullPage: true });
+    if (width === 1440) await page.screenshot({ path: info.outputPath("portal-preview.png") });
     const footer = await page.locator(".footer").boundingBox();
     expect(Math.round(footer!.width)).toBe(width);
+  }
+});
+
+test("cards do portal adaptam leitura no desktop e celular sem overflow", async ({ page }, info) => {
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/buscar?per_page=2");
+    await expect(page.locator(".property-card")).toHaveCount(2);
+    const first = page.locator(".property-card").first();
+    await expect(first.getByRole("link", { name: "Ver imóvel", exact: true })).toBeVisible();
+    const image = await first.locator(".card-media").boundingBox();
+    const body = await first.locator(".card-body").boundingBox();
+    if (width > 760) expect(body!.x).toBeGreaterThan(image!.x + image!.width - 1);
+    else expect(body!.y).toBeGreaterThan(image!.y + image!.height - 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`results-${width}.png`), fullPage: true });
   }
 });

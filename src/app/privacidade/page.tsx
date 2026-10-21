@@ -28,6 +28,18 @@ export default function Privacy() {
         imagem autorizada, seu navegador se comunica com o serviço de origem,
         sujeito às políticas desse serviço.
       </p>
+      <h2>Mapas e arredores</h2>
+      <p>
+        O mapa é carregado somente após sua ação e utiliza OpenStreetMap. Ao
+        explorar arredores, seu navegador consulta o serviço Overpass (Private.coffee por padrão) com as
+        coordenadas já publicadas do imóvel, categoria e raio selecionados.
+        Esses serviços recebem dados técnicos da conexão, como IP. Não usamos
+        sua geolocalização. Links de rota e localização abrem o Google Maps
+        apenas quando você escolhe acessá-los.
+      </p>
+      <p>
+        Consulte as <a className="text-link" href="https://overpass.private.coffee/#privacy-policy" target="_blank" rel="noopener noreferrer">políticas do serviço de arredores</a> e do <a className="text-link" href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>.
+      </p>
       <h2>Antes do lançamento público</h2>
       <p>
         O operador deve informar seus dados de identificação, canal de contato

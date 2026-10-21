@@ -1,0 +1,29 @@
+.neighborhood-map { display: none; height: 400px; width: 100%; margin-top: 24px; z-index: 0; background: #f0f2f4; }
+.neighborhood-map.is-ready { display: block; }
+.neighborhood-consent { border-radius: 12px; border: 1px solid var(--border); background: #f0f2f4; margin-top: 24px; padding: 32px; }
+.neighborhood-consent p { max-width: 520px; }
+.neighborhood-controls { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 14px; align-items: end; margin: 24px 0 12px; }
+.neighborhood-controls label { font-size: 12px; font-weight: 600; display: grid; gap: 6px; }
+.neighborhood .neighborhood-note, .neighborhood .neighborhood-credit { font-size: 12px; line-height: 1.7; }
+.neighborhood-credit a, .neighborhood-links a { text-decoration: underline; text-underline-offset: 3px; }
+.neighborhood-places { padding: 0; margin: 20px 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.neighborhood-places li { border: 1px solid var(--border); padding: 16px; background: #fffdf8; min-width: 0; }
+.neighborhood-places li.is-selected { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.neighborhood-select { display: flex; align-items: center; gap: 12px; padding: 0; background: none; border: 0; color: var(--ink); text-align: left; width: 100%; min-height: 48px; }
+.neighborhood-select strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.neighborhood-select small { display: block; color: var(--muted); margin-top: 4px; }
+.neighborhood-number { width: 30px; height: 30px; background: var(--ink); color: white; display: grid; place-items: center; flex-shrink: 0; }
+.neighborhood-links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; }
+.neighborhood-links a { min-height: 32px; display: inline-flex; align-items: center; }
+.neighborhood-home-pin { background: #263b33; color: white; font: 600 13px/32px var(--font); text-align: center; border: 2px solid white; box-shadow: 0 2px 5px #0003; }
+.neighborhood-place-pin { background: #a83f2c; color: white; border: 2px solid white; border-radius: 50%; text-align: center; font: 600 13px/28px var(--font); box-shadow: 0 2px 5px #0003; }
+.neighborhood .leaflet-control-attribution { font-size: 11px; }
+.published-contact { border-radius: 12px; padding: 20px; border: 1px solid var(--border); margin: 24px 0; }
+.published-contact small { color: var(--muted); }
+@media (max-width: 760px) {
+  .neighborhood-map { height: 330px; }
+  .neighborhood-controls { grid-template-columns: 1fr 1fr; }
+  .neighborhood-controls .button { grid-column: 1 / -1; }
+  .neighborhood-places { grid-template-columns: 1fr; }
+  .neighborhood-consent { padding: 24px; }
+}

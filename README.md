@@ -1,6 +1,6 @@
 # Morada · descoberta de imóveis
 
-Frontend independente da ListingsPlatform, em português brasileiro. Next.js App Router, React, TypeScript estrito, Zod e CSS com tokens. O diretório estava vazio; nenhum código do backend foi alterado. Os ícones usam Lucide (ISC). DM Sans e Manrope são servidas localmente via Fontsource (OFL), sem requisições ao Google Fonts. A ilustração arquitetônica usa SVG/CSS original; nenhum card usa fotografia fictícia.
+Frontend independente da ListingsPlatform, em português brasileiro. Next.js App Router, React, TypeScript estrito, Zod e CSS com tokens. O diretório estava vazio; nenhum código do backend foi alterado. Os ícones usam Lucide (ISC). DM Sans e Manrope são servidas localmente via Fontsource (OFL), sem requisições ao Google Fonts. A imagem de ambientação da abertura é gerada por IA e identificada como ilustrativa; nenhum card usa fotografia fictícia.
 
 ## Executar
 
@@ -93,4 +93,6 @@ Acesse **Minha conta → Revisar anúncios** com `role=admin`. A fila está em `
 
 O detalhe usa carrossel Embla, álbum em mosaico na ação **Ver todas** e ampliação com zoom em tela cheia via Yet Another React Lightbox. Créditos, plantas e regras de autorização de mídia são preservados. [Referências e decisões de UX](docs/gallery-ux.md).
 
-A direção visual editorial e suas referências estão em [docs/visual-direction.md](docs/visual-direction.md).
+A direção visual atual, baseada na referência Imovelweb, e o prompt da imagem de ambientação estão em [docs/portal-design.md](docs/portal-design.md). A direção editorial anterior foi substituída.
+
+Mapas gratuitos, contatos, limites e configuração opcional do Overpass: [docs/maps-and-contact.md](docs/maps-and-contact.md).

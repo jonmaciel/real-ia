@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PropertyCover } from "./property-cover";
-import { ArrowUpRight, House, MapPin, BedDouble, Columns3 } from "lucide-react";
+import { ArrowRight, ArrowUpRight, House, MapPin, BedDouble, Columns3 } from "lucide-react";
 import type { Category, Listing } from "@/lib/contracts";
 import {
   availability,
@@ -61,6 +61,7 @@ export function PropertyCard({
         </span>
       </Link>
       <div className="card-body">
+        <PropertyPrice property={property} />
         <p className="location">
           <MapPin size={14} />
           {[property.neighborhood, property.city].filter(Boolean).join(" · ") ||
@@ -70,10 +71,10 @@ export function PropertyCard({
           <Link href={propertyHref(property)}>{property.title}</Link>
         </h3>
         <PropertyFeatures property={property} category={category} />
-        <PropertyPrice property={property} />
-        <p className="property-availability">
-          {availability(property.availability)}
-        </p>
+        <div className="card-footer">
+          <p className="property-availability">{availability(property.availability)}</p>
+          <Link className="card-detail-link" href={propertyHref(property)}>Ver imóvel <ArrowRight size={16} /></Link>
+        </div>
       </div>
     </article>
   );

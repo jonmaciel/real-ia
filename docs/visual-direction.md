@@ -1,4 +1,6 @@
-# Morada — Atlas de possibilidades
+# Morada — Atlas de possibilidades (histórico)
+
+Esta direção foi substituída a pedido do usuário pela linguagem de portal descrita em [portal-design.md](portal-design.md). O SVG e a camada editorial anterior saíram da aplicação.
 
 ## Referências consultadas em 21/10/2026
 
