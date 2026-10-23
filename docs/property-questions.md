@@ -86,3 +86,15 @@ relatório de operação; não executar smoke em loop.
 - O operador autorizou explicitamente os dois pushes/deploys após a revisão
   automática solicitar autorização específica. Validação publicada do BFF é
   registrada após os deploys, sem novas chamadas de geração.
+
+### Validação após publicação
+
+Frontend b2f38b4 confirmado Ready/produção na Vercel; backend96bd1d2 confirmado
+como último commit live no Render. BFF publicado `/api/imoveis/0/perguntas`
+retornou404 not_found com pergunta válida e headers Morada forjados pelo cliente:
+o BFF substituiu esses headers por sua própria assinatura, aceita pelo backend.
+Consulta direta com IP/assinatura forjados retornou400 antes da geração.
+Sidebar inspecionada no imóvel28 em produção, com screenshot desktop e mobile;
+nenhuma pergunta foi enviada nessa inspeção. No mobile a coluna é position:static
+com ausência de overflow horizontal. Total de chamadas reais ao modelo permanece2.
+Os demais erros foram simulados, sem provocar limites ou falhas do provedor real.
