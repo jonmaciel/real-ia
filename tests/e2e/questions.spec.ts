@@ -3,7 +3,7 @@ const url = "/imovel/2/um-novo-capitulo-no-agua-verde";
 test("perguntas são explícitas, mantêm histórico e exibem fontes seguras", async ({page})=>{
  const calls: Record<string,unknown>[]=[];
  page.on("request", r=>{if(r.url().includes("/perguntas")) calls.push(r.postDataJSON());});
- await page.goto(url);
+ await page.goto(url); await page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true}).click();
  const panel=page.getByRole("region",{name:"Faça qualquer pergunta sobre o imóvel"});
  await expect(panel).toBeVisible(); expect(calls).toHaveLength(0);
  await panel.getByRole("button",{name:"Qual é o custo total?",exact:true}).click();
@@ -21,7 +21,7 @@ test("perguntas são explícitas, mantêm histórico e exibem fontes seguras", a
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test("erros preservam pergunta sem retries e respeitam Retry-After",async({page})=>{
- await page.goto(url); const input=page.getByLabel("Sua pergunta sobre o imóvel");
+ await page.goto(url); await page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true}).click(); const input=page.getByLabel("Sua pergunta sobre o imóvel");
  for(const status of [400,404,502,503,504,429]){
   await input.fill(`Erro${status}`); await input.press("Enter");
   await expect(page.locator(".question-error")).toBeVisible(); await expect(input).toHaveValue(`Erro${status}`);
@@ -44,7 +44,7 @@ test("trocar de imóvel descarta histórico e duplo envio não cobra duas vezes"
   await new Promise(resolve => setTimeout(resolve, 250));
   await route.fulfill({json:{data:{answer:"Não foi possível confirmar estabelecimentos próximos.",citations:[{id:"web-1",title:"Fonte da região",url:"https://example.com/region",kind:"web",start_index:999,end_index:1000}],listing_id:2,model:"gpt-6-luna",web_search_used:true,context_updated_at:null}}});
  });
- await page.goto(url);
+ await page.goto(url); await page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true}).click();
  const input = page.getByLabel("Sua pergunta sobre o imóvel");
  await input.fill("Tem mercado por perto?");
  await input.press("Enter"); await input.press("Enter");

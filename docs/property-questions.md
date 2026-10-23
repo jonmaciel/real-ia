@@ -98,3 +98,26 @@ Sidebar inspecionada no imóvel28 em produção, com screenshot desktop e mobile
 nenhuma pergunta foi enviada nessa inspeção. No mobile a coluna é position:static
 com ausência de overflow horizontal. Total de chamadas reais ao modelo permanece2.
 Os demais erros foram simulados, sem provocar limites ou falhas do provedor real.
+
+## Janela flutuante (23/10/2026)
+
+A conversa agora fica em `PropertyChatWidget`, montado no layout público. O painel
+flutua no canto inferior direito; no celular respeita a altura dinâmica da tela.
+O painel do preço permanece independente, sem rolagem interna compartilhada.
+O relógio começa na montagem do layout e continua na navegação interna: oferece
+abertura após20 segundos. Se houver digitação, aba oculta ou diálogo/galeria
+abertos, aguarda e verifica novamente, sem chamadas à API. A abertura automática
+não move o foco. Abrir manualmente foca o título; minimizar/Escape retorna ao botão.
+Depois de interação manual ou primeira abertura, não reabre sozinho nessa visita.
+
+Fora do detalhe, a janela convida a explorar imóveis, sem inventar endpoint de
+chat geral. No detalhe usa apenas seu ID. Minimizar mantém mensagens/rascunho em
+memória; mudar de imóvel troca a instância e limpa o histórico. Áreas de conta,
+autenticação e administração não exibem o widget. Nenhum estado de conversa é
+persistido no navegador. Nenhuma nova chamada real de geração foi feita.
+
+Validação da janela:25 testes unitários;30 jornadas de chat/galeria aprovadas e2
+puladas por dispositivo. Após refinamento do compositor fixo e do aviso expansível,
+14 jornadas de chat desktop/mobile passaram novamente. Lint sem erros (um aviso
+preexistente de img), typecheck e build de produção aprovados. Capturas locais
+usam contrato simulado; nenhuma chamada adicional ao modelo foi necessária.

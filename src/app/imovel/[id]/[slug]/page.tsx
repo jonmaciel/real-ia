@@ -1,4 +1,3 @@
-import { PropertyQuestions } from "@/components/property-questions";
 import { PropertyGallery } from "@/components/property-gallery";
 import { prepareGallery } from "@/lib/gallery";
 import Link from "next/link";
@@ -155,7 +154,6 @@ export default async function Detail({ params }: Props) {
             Voltar ao início ↑
           </a>
         </aside>
-        <PropertyQuestions key={String(p.id)} listingId={String(p.id)} />
         </div>
         <div className="detail-body">
           <section id="sobre" className="detail-section detail-anchor">

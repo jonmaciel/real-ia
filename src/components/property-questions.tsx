@@ -43,7 +43,7 @@ export function PropertyQuestions({ listingId }: { listingId: string }) {
       if (!parsed.success || String(parsed.data.data.listing_id) !== listingId) throw new Error(questionError(502));
       setTurns(old => [...old, { question: trimmed, response: parsed.data.data }]);
       setQuestion(""); setStatus("Resposta recebida. Consulte as fontes junto à resposta.");
-      requestAnimationFrame(() => { if (latest.current) latest.current.scrollIntoView({ block: "nearest", behavior: "instant" }); input.current?.focus({ preventScroll: true }); });
+      requestAnimationFrame(() => { if (latest.current?.offsetParent) latest.current.scrollIntoView({ block: "nearest", behavior: "instant" }); if (input.current?.offsetParent && input.current.closest(".chat-window")?.contains(document.activeElement)) input.current.focus({ preventScroll: true }); });
     } catch (e) {
       if (controller.signal.aborted) return;
       setError(e instanceof Error && Object.values([400,404,429,502,503,504].map(questionError)).includes(e.message) ? e.message : questionError(0));
@@ -52,6 +52,7 @@ export function PropertyQuestions({ listingId }: { listingId: string }) {
   }
   function clear() { if (locked.current) return; setTurns([]); setQuestion(""); setError(""); setStatus("Conversa limpa."); input.current?.focus(); }
   return <section className="property-questions" aria-labelledby="questions-title">
+    <div className="question-conversation">
     <div className="questions-heading"><MessageCircle size={20} aria-hidden="true" /><span>Conheça melhor este lugar</span></div>
     <h2 id="questions-title">Faça qualquer pergunta sobre o imóvel</h2>
     <p className="questions-note">Assistente de IA sobre o anúncio. Não confirma disponibilidade, negocia ou agenda visitas.</p>
@@ -66,6 +67,7 @@ export function PropertyQuestions({ listingId }: { listingId: string }) {
         </div>
       </div>)}
     </div>
+    </div>
     <form onSubmit={e => { e.preventDefault(); void send(question); }}>
       <label htmlFor="property-question">Sua pergunta sobre o imóvel</label>
       <textarea id="property-question" ref={input} value={question} maxLength={2000} rows={3} disabled={busy} onChange={e => { setQuestion(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(question); } }} aria-describedby="question-help" />
@@ -75,7 +77,9 @@ export function PropertyQuestions({ listingId }: { listingId: string }) {
     <p role="status" aria-live="polite" aria-atomic="true" className="question-status">{status}</p>
     {error && <p className="question-error">{error}</p>}
     {waiting && <p className="questions-note">Tente novamente em {Math.ceil((retryAt - now) / 1000)} s.</p>}
+    <div className="question-tools">
     <button type="button" className="question-clear" disabled={busy} onClick={clear}>Limpar conversa</button>
-    <small className="questions-note">Conversa mantida apenas nesta página. Confira preços e condições com o anunciante. Informações de IA podem conter erros.</small>
+    <details className="question-disclaimer"><summary>Sobre o assistente</summary><small className="questions-note">Conversa mantida apenas nesta página. Confira preços e condições com o anunciante. Informações de IA podem conter erros.</small></details>
+    </div>
   </section>;
 }

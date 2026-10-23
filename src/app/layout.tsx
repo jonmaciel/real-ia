@@ -1,3 +1,4 @@
+import { PropertyChatWidget } from "@/components/property-chat-widget";
 import type { Metadata } from "next";
 import { SiteHeader, Footer } from "@/components/shell";
 import { demo } from "@/lib/api";
@@ -36,6 +37,7 @@ export default function RootLayout({
         <SiteHeader />
         <main id="conteudo">{children}</main>
         <Footer />
+        <PropertyChatWidget />
       </body>
     </html>
   );
