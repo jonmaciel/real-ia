@@ -120,7 +120,7 @@ export function PropertyGallery({
       {photos.length ? (
         <>
           <div
-            className="property-carousel"
+            className={`property-carousel ${photos.length >= 3 ? "has-previews" : ""}`}
             role="region"
             aria-roledescription="carrossel"
             aria-label="Imagens do imóvel"
@@ -173,6 +173,20 @@ export function PropertyGallery({
                 ))}
               </div>
             </div>
+            {photos.length >= 3 && (
+              <div className="gallery-preview-stack" aria-label="Outras imagens do imóvel">
+                {[1, 2].map((offset) => {
+                  const index = (current + offset) % photos.length;
+                  const photo = photos[index];
+                  return (
+                    <button key={offset} onClick={() => open(index)} aria-label={`Abrir prévia: ${photoLabel(photo, index).toLowerCase()}`}>
+                      <GalleryImage photo={photo} alt={`${photoLabel(photo, index)} — ${title}`} />
+                      {photo.attribution && <span className="preview-attribution">{photo.attribution}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <span className="gallery-position" aria-hidden="true">
               {String(current + 1).padStart(2, "0")} /{" "}
               {String(photos.length).padStart(2, "0")}

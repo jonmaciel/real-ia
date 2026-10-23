@@ -255,3 +255,26 @@ test("zoom por duplo clique ou pinça amplia a fotografia", async ({ page }, inf
   }
   await expect(viewer.getByRole("button", { name: "Reduzir imagem", exact: true })).toBeEnabled();
 });
+
+test("detalhe prioriza galeria e prévias abrem a imagem sem bloquear acesso", async ({ page }, info) => {
+  await images(page);
+  await detail(page);
+  const visual = await page.locator(".detail-visual").boundingBox();
+  const heading = await page.getByRole("heading", { level: 1 }).boundingBox();
+  expect(visual!.y + visual!.height).toBeLessThan(heading!.y);
+  if (!info.project.use.isMobile) {
+    await page.getByRole("button", { name: "Abrir prévia: foto 2", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Imagem em tela cheia" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".gallery-current")).toContainText("2 de 8");
+  } else {
+    await expect(page.locator(".gallery-preview-stack")).toBeHidden();
+  }
+  const intro = await page.locator(".detail-intro").boundingBox();
+  const price = await page.locator(".price-panel").boundingBox();
+  if (!info.project.use.isMobile) expect(Math.abs(intro!.y - price!.y)).toBeLessThan(2);
+  else expect(price!.y).toBeGreaterThanOrEqual(intro!.y + intro!.height);
+  await expect(page.getByRole("definition").first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath("detail-rentola.png"), fullPage: true });
+});

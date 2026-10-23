@@ -24,6 +24,7 @@ import {
   PropertyFeatures,
   ErrorState,
 } from "@/components/properties";
+import { PropertyFacts } from "@/components/property-facts";
 import { PropertyNeighborhood } from "@/components/property-neighborhood";
 import { publicCoordinates, publishedContact } from "@/lib/property-location";
 import { ShareButton } from "@/components/share";
@@ -90,9 +91,19 @@ export default async function Detail({ params }: Props) {
         <span>/</span>
         {p.title}
       </nav>
-      <div className="section-heading">
+          <div id="fotos" className="detail-anchor detail-visual">
+            <PropertyGallery
+              title={p.title}
+              photos={gallery.photos}
+              attachments={gallery.attachments}
+              failed={media.status === "rejected"}
+            />
+          </div>
+      <div className="detail-grid">
+        <div className="detail-intro">
+      <div className="section-heading detail-heading">
         <div>
-          <span className="eyebrow">{modality(p.listing_type)}</span>
+          <span className="detail-modality">{modality(p.listing_type)}</span>
           <h1>{p.title}</h1>
           <p>
             {[p.neighborhood, p.city, p.region].filter(Boolean).join(" · ") ||
@@ -101,30 +112,51 @@ export default async function Detail({ params }: Props) {
         </div>
         <ShareButton />
       </div>
+      <div className="detail-highlights">
+        <PropertyFeatures property={p} category={category.status === "fulfilled" ? category.value : undefined} />
+      </div>
       <nav className="detail-navigation" aria-label="Seções do imóvel">
         <a href="#fotos">Fotos</a>
         <a href="#sobre">Sobre o imóvel</a>
         <a href="#localizacao">Localização</a>
         <a href="#fontes">Anúncios de origem</a>
       </nav>
-      <div className="detail-grid">
-        <div>
-          <div id="fotos" className="detail-anchor">
-            <PropertyGallery
-              title={p.title}
-              photos={gallery.photos}
-              attachments={gallery.attachments}
-              failed={media.status === "rejected"}
-            />
+        </div>
+        <aside className="price-panel">
+          <span className="eyebrow">PREÇO ANUNCIADO</span>
+          <PropertyPrice property={p} />
+          <p>{availability(p.availability)}</p>
+          <p>
+            {modality(p.listing_type)} · {p.currency ?? "Moeda não informada"}
+          </p>
+          <a className="button primary source-shortcut" href="#fontes">
+            Consultar anúncios de origem <ArrowUpRight size={17} />
+          </a>
+          <div className="price-context">
+            <strong>Antes de decidir</strong>
+          <p>
+            Condomínio, IPTU e outras taxas não informados. O preço anunciado
+            não representa necessariamente o custo total.
+          </p>
           </div>
+          <details className="listing-dates"><summary>Datas deste anúncio</summary>
+          {date(p.published_at) && <p>Publicado em {date(p.published_at)}</p>}
+          {date(p.first_seen_at) && (
+            <p>Visto pela primeira vez em {date(p.first_seen_at)}</p>
+          )}
+          {date(p.updated_at) && <p>Atualizado em {date(p.updated_at)}</p>}
+          {date(p.last_verified_at) && (
+            <p>Verificado em {date(p.last_verified_at)}</p>
+          )}
+          </details>
+          <a className="text-link" href="#conteudo">
+            Voltar ao início ↑
+          </a>
+        </aside>
+        <div className="detail-body">
           <section id="sobre" className="detail-section detail-anchor">
             <h2>Um pouco mais sobre este lugar</h2>
-            <PropertyFeatures
-              property={p}
-              category={
-                category.status === "fulfilled" ? category.value : undefined
-              }
-            />
+            <PropertyFacts property={p} />
             <p className="description">
               {p.description || "O anunciante não informou uma descrição."}
             </p>
@@ -195,33 +227,6 @@ export default async function Detail({ params }: Props) {
             )}
           </section>
         </div>
-        <aside className="price-panel">
-          <span className="eyebrow">PREÇO ANUNCIADO</span>
-          <PropertyPrice property={p} />
-          <p>{availability(p.availability)}</p>
-          <p>
-            {modality(p.listing_type)} · {p.currency ?? "Moeda não informada"}
-          </p>
-          <a className="button primary source-shortcut" href="#fontes">
-            Consultar anúncios de origem <ArrowUpRight size={17} />
-          </a>
-          <hr />
-          <p>
-            Condomínio, IPTU e outras taxas não informados. O preço anunciado
-            não representa necessariamente o custo total.
-          </p>
-          {date(p.published_at) && <p>Publicado em {date(p.published_at)}</p>}
-          {date(p.first_seen_at) && (
-            <p>Visto pela primeira vez em {date(p.first_seen_at)}</p>
-          )}
-          {date(p.updated_at) && <p>Atualizado em {date(p.updated_at)}</p>}
-          {date(p.last_verified_at) && (
-            <p>Verificado em {date(p.last_verified_at)}</p>
-          )}
-          <a className="text-link" href="#conteudo">
-            Voltar ao início ↑
-          </a>
-        </aside>
       </div>
     </article>
   );

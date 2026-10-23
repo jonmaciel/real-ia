@@ -106,3 +106,29 @@ export function availability(value: string | null | undefined) {
     )[value ?? "unknown"] ?? value
   );
 }
+
+/** Public real-estate attributes only; unknown or absent values stay absent. */
+export function propertyFacts(p: Listing): { label: string; value: string }[] {
+  const a: Record<string, unknown> = { ...p.structured_attributes };
+  for (const [key, value] of Object.entries(p.real_estate ?? {}))
+    if (value != null) a[key] = value;
+  const result: { label: string; value: string }[] = [];
+  const types: Record<string, string> = {
+    apartment: "Apartamento", house: "Casa", townhouse: "Sobrado", studio: "Studio",
+    land: "Terreno", commercial: "Comercial", rural: "Rural",
+  };
+  if (typeof a.property_type === "string" && types[a.property_type])
+    result.push({ label: "Tipo do imóvel", value: types[a.property_type] });
+  for (const [key, label] of [["bedrooms", "Quartos"], ["bathrooms", "Banheiros"], ["parking_spaces", "Vagas de garagem"]]) {
+    const value = a[key];
+    if (typeof value === "number" && Number.isInteger(value) && value >= 0)
+      result.push({ label, value: value.toLocaleString(locale.language) });
+  }
+  for (const [key, label] of [["usable_area_sqm", "Área útil"], ["reported_area_sqm", "Área informada"]]) {
+    const value = a[key];
+    if ((typeof value === "number" && Number.isFinite(value) && value > 0) || (typeof value === "string" && /^\d+(\.\d+)?$/.test(value) && Number.isFinite(Number(value)) && Number(value) > 0))
+      result.push({ label, value: `${String(value).replace(".", ",")} m²` });
+  }
+  if (a.balcony === true) result.push({ label: "Varanda", value: "Sim" });
+  return result;
+}
