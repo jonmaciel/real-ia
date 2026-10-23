@@ -24,7 +24,11 @@ Paginação, reload e voltar/avançar preservam critérios, preço base/total me
 false, zeros, preferências e exclusões. Paginar não faz uma nova geração de IA.
 Uma nova mensagem reinicia a página. Token, pergunta e histórico não vão na URL.
 
-Os resultados anteriores ficam ocultos durante o envio/atualização. Erros de GET
+Ao enviar o prompt, o campo mostra “Pensando…” e mantém os imóveis atuais.
+Somente após a resposta validada do backend começa “Atualizando imóveis…”,
+com carregamento da lista. Ao concluir o GET, mostra “Lista atualizada”. Uma
+falha da IA preserva o prompt e os imóveis sem iniciar a consulta de resultados.
+Os resultados anteriores ficam ocultos durante a atualização da lista. Erros de GET
 não são tratados como lista vazia nem substituídos pelo catálogo sem filtros.
 Só o total retornado pelo endpoint exato é mostrado como contagem global. Um
 `action:no_results` não determina vazio: o GET pode conter imóveis já vistos.
@@ -180,3 +184,12 @@ anterior é válido, mas ainda não fornece a informação necessária para apli
 com segurança a lista durante essa clarificação. Nenhum token foi registrado ou
 salvo. Não houve repetição de chamada paga. O remoto master do backend ainda
 apontava para 09dc6c3 na primeira consulta de referência deste teste.
+
+## Estados de carregamento separados
+
+Verificação da sequência “Pensando…” → “Atualizando imóveis…” → “Lista atualizada”:
+36 testes unitários e 28 testes de navegador aprovados em desktop/mobile, com
+build e typecheck aprovados. Os testes controlam separadamente a resposta do POST
+e o carregamento dos resultados, confirmando que a consulta da lista não começa
+durante o pensamento e que uma falha do POST mantém os imóveis e o rascunho.
+Lint sem erros, com o aviso preexistente de img. Nenhuma geração paga nesta etapa.

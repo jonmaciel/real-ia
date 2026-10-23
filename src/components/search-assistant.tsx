@@ -36,7 +36,8 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
   }), [subscribeSearch, query.perPage, router]);
   const updating = chat.busy || pending;
   const updated = expectedKey === queryKey && !resultError && !updateError;
-  const message = updating ? "Atualizando sua busca…"
+  const message = chat.busy ? "Pensando…"
+    : pending ? "Atualizando imóveis…"
     : chat.error ? chat.error.message
     : updateError || (expectedKey === queryKey && resultError) ? "Não foi possível atualizar a lista. Tente novamente em instantes."
     : updated ? last?.action === "clarify" ? `Lista atualizada. ${last.answer}` : "Lista atualizada."
@@ -96,8 +97,8 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
         {manualForm}
       </div>
     </section>
-    <div className="main-search-results" aria-label="Imóveis da busca" aria-busy={updating}>
-      {updating ? <div className="search-results-loading" role="status">Atualizando imóveis…</div>
+    <div className="main-search-results" aria-label="Imóveis da busca" aria-busy={pending}>
+      {pending ? <div className="search-results-loading" role="status">Atualizando imóveis…</div>
         : updateError ? <div className="state-box"><p>Não foi possível atualizar os imóveis com os critérios da conversa.</p><button className="button secondary" type="button" onClick={() => { setManual(true); setUpdateError(false); }}>Usar filtros</button></div>
         : children}
     </div>

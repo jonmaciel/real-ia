@@ -1,6 +1,70 @@
 import { test, expect } from "@playwright/test";
 import { assistantResponse } from "../assistant-fixtures";
 
+test("pensa mantendo a lista atual e só atualiza os imóveis após a resposta do backend", async ({ page }) => {
+  let releaseAnswer!: () => void;
+  let releaseResults!: () => void;
+  const answer = new Promise<void>(resolve => { releaseAnswer = resolve; });
+  const results = new Promise<void>(resolve => { releaseResults = resolve; });
+  let resultRequests = 0;
+  await page.route("**/api/assistente/mensagens", async route => {
+    await answer;
+    await route.fulfill({ json: { data: assistantResponse({
+      answer: "Você quer comprar ou alugar?", applied_filters: { city: "Araucária", property_type: "house" },
+    }) } });
+  });
+  await page.goto("/buscar?per_page=1");
+  await page.route("**/buscar?**", async route => {
+    if (route.request().headers().rsc === "1" && new URL(route.request().url()).searchParams.get("assistant") === "1") {
+      resultRequests++;
+      await results;
+    }
+    await route.continue();
+  });
+  const list = page.locator(".main-search-results");
+  const status = page.locator(".search-ai-status");
+  const input = page.getByLabel("O que você procura?");
+  try {
+    await expect(list.locator(".property-card")).toContainText("Apartamento com varanda no Batel");
+    await input.fill("uma casa em araucaria"); await input.press("Enter");
+    await expect(status).toHaveText("Pensando…");
+    await expect(input).toBeDisabled();
+    await expect(list).toHaveAttribute("aria-busy", "false");
+    await expect(list.locator(".property-card")).toBeVisible();
+    await expect(page.locator(".search-results-loading")).toHaveCount(0);
+    expect(resultRequests).toBe(0);
+    releaseAnswer();
+    await expect(status).toHaveText("Atualizando imóveis…");
+    await expect(list).toHaveAttribute("aria-busy", "true");
+    await expect(page.locator(".search-results-loading")).toBeVisible();
+    await expect(list.locator(".property-card")).toHaveCount(0);
+    await expect(input).toBeDisabled();
+    await expect.poll(() => resultRequests).toBe(1);
+    releaseResults();
+    await expect(status).toHaveText("Lista atualizada. Você quer comprar ou alugar?");
+    await expect(list).toHaveAttribute("aria-busy", "false");
+    await expect(list.locator(".property-card")).toContainText("Casa para comprar em Araucária");
+    await expect(input).toBeEnabled();
+  } finally { releaseAnswer(); releaseResults(); }
+});
+
+test("erro ao pensar preserva os imóveis e o prompt sem iniciar atualização da lista", async ({ page }) => {
+  let resultRequests = 0;
+  await page.goto("/buscar?per_page=1");
+  page.on("request", request => {
+    if (request.headers().rsc === "1" && new URL(request.url()).searchParams.get("assistant") === "1") resultRequests++;
+  });
+  await page.route("**/api/assistente/mensagens", route => route.fulfill({ status: 503, json: { error: { code: "unavailable" } } }));
+  const input = page.getByLabel("O que você procura?");
+  await input.fill("uma casa em araucaria"); await input.press("Enter");
+  await expect(page.getByRole("button", { name: "Tentar novamente", exact: true })).toBeEnabled();
+  await expect(input).toHaveValue("uma casa em araucaria");
+  await expect(page.locator(".main-search-results")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".property-card")).toContainText("Apartamento com varanda no Batel");
+  await expect(page.locator(".search-results-loading")).toHaveCount(0);
+  expect(resultRequests).toBe(0);
+});
+
 test("IA inicial tem somente um input; filtros são opcionais por teclado e não geram chamadas", async ({ page }, info) => {
   let calls = 0;
   page.on("request", request => { if (request.url().includes("/api/assistente/mensagens")) calls++; });
