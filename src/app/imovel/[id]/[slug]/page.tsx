@@ -1,3 +1,4 @@
+import { ListingConversationSelection } from "@/components/assistant-provider";
 import { PropertyGallery } from "@/components/property-gallery";
 import { prepareGallery } from "@/lib/gallery";
 import Link from "next/link";
@@ -84,6 +85,7 @@ export default async function Detail({ params }: Props) {
   const contact = publishedContact(p.description);
   return (
     <article className="section detail">
+      <ListingConversationSelection id={String(p.id)} />
       <nav className="breadcrumb">
         <Link href="/">Início</Link>
         <span>/</span>

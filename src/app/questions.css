@@ -75,3 +75,38 @@
 .question-disclaimer { flex: 1; font-size: 12px; }
 .question-disclaimer summary { min-height: 44px; padding-top: 12px; cursor: pointer; }
 .question-disclaimer small { padding-bottom: 8px; }
+
+.assistant-context { padding: 10px 12px; background: #fff4ed; border-radius: 10px; color: #79350f; font-size: 12px; line-height: 1.5; }
+.assistant-filters { margin: 12px 0; font-size: 12px; }
+.assistant-filters summary { min-height: 36px; padding-top: 8px; cursor: pointer; font-weight: 650; }
+.assistant-filters ul { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 8px 0; }
+.assistant-filters li { padding: 6px 9px; border-radius: 8px; background: #f0f3f5; font-size: 11px; }
+.assistant-unverified, .recommendation-warnings { padding: 12px; background: #fff8e8; border-radius: 10px; font-size: 12px; margin: 12px 0; }
+.assistant-unverified ul, .recommendation-warnings ul { padding-left: 18px; margin: 8px 0 0; }
+.assistant-recommendations { display: grid; gap: 16px; margin: 16px 0; }
+.assistant-recommendation { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.assistant-recommendations .property-card { display: block; border: 0; border-radius: 0; box-shadow: none; }
+.assistant-recommendations .card-media { display: block; aspect-ratio: 16 / 9; height: auto; min-height: 0; }
+.assistant-recommendations .card-body { padding: 14px; }
+.assistant-recommendations .property-price { font-size: 23px; }
+.assistant-recommendations .card-body h3 { font-size: 16px; margin: 10px 0; }
+.assistant-recommendations .features { gap: 10px; font-size: 12px; }
+.assistant-recommendations .card-footer { flex-wrap: wrap; gap: 12px; }
+.recommendation-evidence { padding: 0 14px 14px; font-size: 12px; line-height: 1.6; }
+.recommendation-evidence > ul { padding-left: 18px; }
+.recommendation-evidence a { text-decoration: underline; text-underline-offset: 3px; }
+.recommendation-evidence summary { min-height: 44px; padding-top: 12px; cursor: pointer; font-weight: 650; }
+.recommendation-evidence p { font-size: 12px; }
+.assistant-more { width: 100%; margin-bottom: 12px; }
+.chat-window .question-error { max-height: 160px; overflow-y: auto; }
+.chat-window .question-error p { font-size: 12px; margin: 6px 0; }
+.assistant-recommendations .property-card { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: stretch; }
+.assistant-recommendations .card-media { aspect-ratio: auto; height: 100%; }
+.assistant-recommendations .card-arrow { display: none; }
+.assistant-recommendations .listing-badge { left: 5px; top: 8px; font-size: 10px; padding: 5px; }
+.assistant-recommendations .no-photo { font-size: 9px; text-align: center; }
+.assistant-recommendations .architecture-lines { padding: 8px; }
+.assistant-recommendations .architecture-lines svg { width: 40px; height: 40px; }
+.assistant-recommendations .card-body { padding: 12px; }
+.assistant-recommendations .property-price { font-size: 20px; }
+.assistant-recommendations .card-body h3 { font-size: 14px; }

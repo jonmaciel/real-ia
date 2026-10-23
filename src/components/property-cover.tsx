@@ -4,7 +4,7 @@ import { House } from "lucide-react";
 export function PropertyCover({ src, alt }: { src?: string | null; alt: string }) {
   const [failed, setFailed] = useState(false);
   let trusted = false;
-  try { trusted = !!src && new URL(src).protocol === "https:" && new URL(src).hostname === "ik.imagekit.io"; } catch {}
+  try { trusted = !!src && new URL(src).protocol === "https:" && new URL(src).hostname === "ik.imagekit.io" && !new URL(src).username && !new URL(src).password; } catch {}
   return trusted && !failed ? (
     // ImageKit serves optimized images; preserve the external CDN URL.
     // eslint-disable-next-line @next/next/no-img-element

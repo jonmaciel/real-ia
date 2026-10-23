@@ -36,6 +36,9 @@ export function period(type: string | null | undefined) {
       {
         monthly: "/mês",
         yearly: "/ano",
+        weekly: "/semana",
+        daily: "/dia",
+        one_off: " · cobrança única",
         hourly: "/hora",
         negotiable: " · negociável",
         on_request: " · sob consulta",
@@ -60,10 +63,10 @@ export function slug(title: string) {
       .replace(/^-|-$/g, "") || "imovel"
   );
 }
-export function propertyHref(p: Listing) {
+export function propertyHref(p: Pick<Listing, "id" | "title">) {
   return `/imovel/${encodeURIComponent(p.id)}/${slug(p.title)}`;
 }
-export function features(p: Listing, category?: Category) {
+export function features(p: Pick<Listing, "structured_attributes" | "real_estate">, category?: Category) {
   const a = p.structured_attributes ?? {};
   const schema = category?.attribute_schema;
   const items: string[] = [];

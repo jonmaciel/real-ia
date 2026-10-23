@@ -1,6 +1,6 @@
 import { z } from "zod";
 const text = z.string().trim().min(1).max(2000).refine(v => !v.includes("\u0000"));
-export const historyMessageSchema = z.object({ role: z.enum(["user", "assistant"]), content: text }).strict();
+export const historyMessageSchema = z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1).max(2000).refine(v => v.trim().length > 0 && !v.includes("\u0000")) }).strict();
 export type HistoryMessage = z.infer<typeof historyMessageSchema>;
 export const questionInputSchema = z.object({
   question: text,

@@ -1,85 +1,72 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Send } from "lucide-react";
-import { boundedHistory, citationUrl, questionError, questionResponseSchema, retrySeconds, type QuestionAnswer, type HistoryMessage } from "@/lib/property-questions";
-function currentTime() { return Date.now(); }
-type Turn = { question: string; response: QuestionAnswer };
-const suggestions = ["Qual é o custo total?", "Quais taxas estão incluídas?", "Como é a localização?", "Tem mercado ou escola por perto?"];
-export function PropertyQuestions({ listingId }: { listingId: string }) {
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [question, setQuestion] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
-  const [retryAt, setRetryAt] = useState(0);
-  const [now, setNow] = useState(0);
-  const locked = useRef(false);
-  const abort = useRef<AbortController | null>(null);
+import { useEffect, useRef } from "react";
+import { Send } from "lucide-react";
+import { citationUrl } from "@/lib/property-questions";
+import { assistantFilterLabels } from "@/lib/assistant-presentation";
+import { useAssistant } from "./assistant-provider";
+import { AssistantRecommendations } from "./assistant-recommendations";
+const propertySuggestions = ["Qual é o custo total?", "Quais taxas estão incluídas?", "Como é a localização?", "Tem mercado ou escola por perto?"];
+export function PropertyQuestions() {
+  const chat = useAssistant();
+  const { state, question, busy, error, waiting } = chat;
+  const propertyMode = state.mode === "property" && state.selectedId !== null;
   const input = useRef<HTMLTextAreaElement>(null);
   const latest = useRef<HTMLDivElement>(null);
-  useEffect(() => () => abort.current?.abort(), []);
   useEffect(() => {
-    if (!retryAt) return;
-    const timer = window.setInterval(() => setNow(currentTime()), 1000);
-    return () => window.clearInterval(timer);
-  }, [retryAt]);
-  const waiting = retryAt > now;
-  async function send(value: string) {
-    const trimmed = value.trim();
-    if (locked.current || currentTime() < retryAt || !trimmed || trimmed.length > 2000) return;
-    locked.current = true; setBusy(true); setError(""); setQuestion(value); setStatus("Consultando os dados do imóvel…");
-    const controller = new AbortController(); abort.current = controller;
-    const history: HistoryMessage[] = turns.flatMap(t => [{ role: "user", content: t.question }, { role: "assistant", content: t.response.answer }]);
-    try {
-      const response = await fetch(`/api/imoveis/${encodeURIComponent(listingId)}/perguntas`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: trimmed, history: boundedHistory(history) }), signal: controller.signal,
-      });
-      if (!response.ok) {
-        if (response.status === 429) { const seconds = retrySeconds(response.headers.get("Retry-After")) ?? 60; setNow(currentTime()); setRetryAt(currentTime() + seconds * 1000); }
-        throw new Error(questionError(response.status));
-      }
-      const parsed = questionResponseSchema.safeParse(await response.json());
-      if (!parsed.success || String(parsed.data.data.listing_id) !== listingId) throw new Error(questionError(502));
-      setTurns(old => [...old, { question: trimmed, response: parsed.data.data }]);
-      setQuestion(""); setStatus("Resposta recebida. Consulte as fontes junto à resposta.");
-      requestAnimationFrame(() => { if (latest.current?.offsetParent) latest.current.scrollIntoView({ block: "nearest", behavior: "instant" }); if (input.current?.offsetParent && input.current.closest(".chat-window")?.contains(document.activeElement)) input.current.focus({ preventScroll: true }); });
-    } catch (e) {
-      if (controller.signal.aborted) return;
-      setError(e instanceof Error && Object.values([400,404,429,502,503,504].map(questionError)).includes(e.message) ? e.message : questionError(0));
-      setStatus("Não foi possível responder. Sua pergunta foi preservada.");
-    } finally { locked.current = false; setBusy(false); }
-  }
-  function clear() { if (locked.current) return; setTurns([]); setQuestion(""); setError(""); setStatus("Conversa limpa."); input.current?.focus(); }
+    if (latest.current?.offsetParent) {
+      const target = latest.current.querySelector(".assistant-recommendation") ?? latest.current.querySelector(".question-answer") ?? latest.current;
+      target.scrollIntoView({ block: "start", behavior: "instant" });
+      if (input.current && (document.activeElement === document.body || input.current.closest(".chat-window")?.contains(document.activeElement))) input.current.focus({ preventScroll: true });
+    }
+  }, [state.turns.length]);
+  const filters = assistantFilterLabels(state.filters);
+  function clear() { chat.clear(); input.current?.focus(); }
   return <section className="property-questions" aria-labelledby="questions-title">
     <div className="question-conversation">
-    <div className="questions-heading"><MessageCircle size={20} aria-hidden="true" /><span>Conheça melhor este lugar</span></div>
-    <h2 id="questions-title">Faça qualquer pergunta sobre o imóvel</h2>
-    <p className="questions-note">Assistente de IA sobre o anúncio. Não confirma disponibilidade, negocia ou agenda visitas.</p>
-    {!turns.length && <div className="question-suggestions">{suggestions.map(s => <button type="button" key={s} disabled={busy || waiting} onClick={() => void send(s)}>{s}</button>)}</div>}
-    <div className="question-history" aria-label="Conversa sobre este imóvel" tabIndex={turns.length ? 0 : undefined}>
-      {turns.map((turn, i) => <div className="question-turn" key={i} ref={i === turns.length - 1 ? latest : undefined}>
-        <p className="question-user"><strong>Você</strong>{turn.question}</p>
-        <div className="question-answer"><strong>Morada</strong><p>{turn.response.answer}</p>
-          {turn.response.web_search_used && <small>Pesquisa externa utilizada nesta resposta.</small>}
-          <ul className="question-citations">{turn.response.citations.map((c, index) => { const url = citationUrl(c.url); return url ? <li key={`${c.id}-${index}`}><span>{c.kind === "web" ? "Pesquisa sobre a região" : "Anúncio original"}</span><a href={url} target="_blank" rel="noopener noreferrer">{c.title || "Consultar fonte"}</a></li> : null; })}</ul>
-          {turn.response.context_updated_at && !Number.isNaN(Date.parse(turn.response.context_updated_at)) && <small>Dados do anúncio de referência: {new Date(turn.response.context_updated_at).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}. Não representa verificação humana.</small>}
-        </div>
-      </div>)}
+      <h2 id="questions-title">{propertyMode ? "Faça qualquer pergunta sobre o imóvel" : "Encontre seu imóvel"}</h2>
+      <p className="questions-note">{propertyMode ? "Assistente de IA sobre o anúncio. Não confirma disponibilidade, negocia ou agenda visitas." : "Conte a cidade, o orçamento e o que você procura."}</p>
+      {!propertyMode && chat.pageListingId && <p className="assistant-context">Buscando outras opções. O anúncio aberto na página não está selecionado na conversa.</p>}
+      {propertyMode && <p className="assistant-context">Imóvel selecionado: #{state.selectedId}. Ao pedir alternativas, a conversa volta para a busca.</p>}
+      {filters.length > 0 && <details className="assistant-filters" open={state.mode === "search"}><summary>Critérios efetivamente aplicados</summary><ul>{filters.map((label, i) => <li key={i}>{label}</li>)}</ul></details>}
+      {!state.turns.length && <div className="question-suggestions">{(propertyMode ? propertySuggestions : ["Quero alugar", "Quero comprar"]).map(s => <button type="button" key={s} disabled={busy || waiting} onClick={() => void chat.send(s)}>{s}</button>)}</div>}
+      <div className="question-history" aria-label="Conversa com o Morada" tabIndex={state.turns.length ? 0 : undefined}>
+        {state.turns.map((turn, i) => <div className="question-turn" key={i} ref={i === state.turns.length - 1 ? latest : undefined}>
+          <p className="question-user"><strong>Você</strong>{turn.question}</p>
+          <div className="question-answer"><strong>Morada</strong>
+            <small>{turn.response.mode === "property" ? `Resposta sobre o imóvel #${turn.response.selected_listing_id}` : "Busca no catálogo"}</small>
+            <p>{turn.response.answer}</p>
+            {turn.response.action === "no_results" && <p>Não há novas opções para estes critérios e as exclusões desta conversa. Ajuste sua busca por mensagem ou inicie uma nova busca.</p>}
+            {turn.response.unverified_preferences.length > 0 && <div className="assistant-unverified"><strong>Ainda não foi possível verificar</strong><ul>{turn.response.unverified_preferences.map((item, j) => <li key={j}>{item}</li>)}</ul></div>}
+            <AssistantRecommendations cards={turn.response.recommendations} onSelect={chat.select} />
+            {turn.response.web_search_used && <small>Pesquisa externa utilizada nesta resposta.</small>}
+            <ul className="question-citations">{turn.response.citations.map((c, index) => { const url = citationUrl(c.url); return url ? <li key={`${c.id}-${index}`}><span>{c.kind === "web" ? "Pesquisa sobre a região" : "Anúncio original"}</span><a href={url} target="_blank" rel="noopener noreferrer">{c.title || "Consultar fonte"}</a></li> : null; })}</ul>
+            {turn.response.context_updated_at && !Number.isNaN(Date.parse(turn.response.context_updated_at)) && <small>Dados de referência: {new Date(turn.response.context_updated_at).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}. Não representa verificação humana.</small>}
+          </div>
+        </div>)}
+      </div>
+      {state.turns.at(-1)?.response.action === "no_results" && state.mode === "search" && <button className="button secondary assistant-more" type="button" onClick={chat.restartSearch}>Iniciar nova busca</button>}
+      {state.hasMore && state.mode === "search" && <button className="button secondary assistant-more" type="button" disabled={busy || waiting} onClick={() => void chat.send("Mostre mais opções")}>Mostrar mais opções</button>}
     </div>
-    </div>
-    <form onSubmit={e => { e.preventDefault(); void send(question); }}>
-      <label htmlFor="property-question">Sua pergunta sobre o imóvel</label>
-      <textarea id="property-question" ref={input} value={question} maxLength={2000} rows={3} disabled={busy} onChange={e => { setQuestion(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(question); } }} aria-describedby="question-help" />
+    <form onSubmit={e => { e.preventDefault(); void chat.send(question); }}>
+      <label htmlFor="property-question">{propertyMode ? "Sua pergunta sobre o imóvel" : "O que você procura?"}</label>
+      <textarea id="property-question" ref={input} value={question} maxLength={2000} rows={3} disabled={busy} placeholder={propertyMode ? "Pergunte sobre preço, taxas ou peça outra opção…" : "Ex.: quero alugar em Curitiba, até R$ 3.000, com dois quartos e que aceite pets"} onChange={e => chat.setQuestion(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void chat.send(question); } }} aria-describedby="question-help" />
       <small id="question-help">Enter envia · Shift + Enter quebra linha. {question.length}/2.000</small>
-      <button type="submit" className="button primary" disabled={busy || waiting || !question.trim()}><Send size={16} aria-hidden="true" />{busy ? "Consultando…" : error ? "Tentar novamente" : "Enviar pergunta"}</button>
+      <button type="submit" className="button primary" disabled={busy || waiting || !question.trim() || error?.code === "invalid_search_token" || error?.status === 404}><Send size={16} aria-hidden="true" />{busy ? "Consultando…" : error ? "Tentar novamente" : "Enviar pergunta"}</button>
+      {busy && <button type="button" className="question-clear" onClick={() => chat.cancel()}>Cancelar envio</button>}
     </form>
-    <p role="status" aria-live="polite" aria-atomic="true" className="question-status">{status}</p>
-    {error && <p className="question-error">{error}</p>}
-    {waiting && <p className="questions-note">Tente novamente em {Math.ceil((retryAt - now) / 1000)} s.</p>}
+    <p role="status" aria-live="polite" aria-atomic="true" className="question-status">{chat.status}</p>
+    {error && <div className="question-error"><p>{error.message}</p>
+      {error.code === "invalid_search_token" && <><p>Ao iniciar uma nova busca, as preferências e as opções já mostradas serão reiniciadas. Nenhuma mensagem será reenviada automaticamente.</p><button type="button" className="button secondary" onClick={chat.restartSearch}>Iniciar nova busca</button></>}
+      {error.status === 404 && <button type="button" className="button secondary" onClick={chat.continueSearch}>Continuar buscando sem este imóvel</button>}
+    </div>}
+    {waiting && <p className="questions-note">Tente novamente em {chat.secondsLeft} s.</p>}
     <div className="question-tools">
-    <button type="button" className="question-clear" disabled={busy} onClick={clear}>Limpar conversa</button>
-    <details className="question-disclaimer"><summary>Sobre o assistente</summary><small className="questions-note">Conversa mantida apenas nesta página. Confira preços e condições com o anunciante. Informações de IA podem conter erros.</small></details>
+      <button type="button" className="question-clear" onClick={clear}>Limpar conversa</button>
+      <details className="question-disclaimer"><summary>Opções e privacidade</summary>
+        <button className="question-clear" type="button" onClick={chat.restartSearch}>Iniciar nova busca</button>
+        {chat.pageListingId && <button className="question-clear" type="button" onClick={chat.restartProperty}>Recomeçar sobre este imóvel</button>}
+        <small className="questions-note">A nova busca apaga preferências e exclusões anteriores. Conversa mantida só em memória nesta visita, inclusive ao abrir imóveis. A IA pode errar; confirme valores e condições com o anunciante. Cancelar não garante interrupção do processamento no servidor.</small>
+      </details>
     </div>
   </section>;
 }

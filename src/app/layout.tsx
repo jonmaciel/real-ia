@@ -1,3 +1,4 @@
+import { AssistantProvider } from "@/components/assistant-provider";
 import { PropertyChatWidget } from "@/components/property-chat-widget";
 import type { Metadata } from "next";
 import { SiteHeader, Footer } from "@/components/shell";
@@ -34,10 +35,12 @@ export default function RootLayout({
             indisponíveis.
           </div>
         )}
+        <AssistantProvider>
         <SiteHeader />
         <main id="conteudo">{children}</main>
         <Footer />
         <PropertyChatWidget />
+        </AssistantProvider>
       </body>
     </html>
   );

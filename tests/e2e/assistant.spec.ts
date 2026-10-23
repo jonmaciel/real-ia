@@ -1,0 +1,73 @@
+import { test, expect, type Page } from "@playwright/test";
+import { assistantResponse, recommendation } from "../assistant-fixtures";
+async function open(page:Page,url="/") { await page.goto(url); await page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true}).click(); }
+async function send(page:Page,question:string) { await page.locator("#property-question").fill(question); await page.locator("#property-question").press("Enter"); await expect(page.getByRole("button",{name:"Enviar pergunta",exact:true})).toBeDisabled(); await expect(page.locator("#property-question")).toHaveValue(""); }
+const detail="/imovel/2/um-novo-capitulo-no-agua-verde";
+test("busca → card → taxas → alternativa mantém token e histórico sem reviver ID da URL",async({page},info)=>{
+ const calls:Record<string,unknown>[]=[];
+ page.on("request",r=>{if(r.url().includes("/api/assistente/mensagens")) calls.push(r.postDataJSON());});
+ await open(page);
+ await expect(page.getByRole("heading",{name:"Encontre seu imóvel",exact:true})).toBeVisible(); expect(calls).toHaveLength(0);
+ await send(page,"Quero alugar em Curitiba, até R$ 3.000, com dois quartos e pets");
+ expect(calls[0]).toMatchObject({selected_listing_id:null,search_token:null,history:[]});
+ await expect(page.locator(".assistant-recommendation")).toHaveCount(3);
+ await expect(page.getByText("Ainda não foi possível verificar",{exact:true})).toBeVisible();
+ await expect(page.getByText("Proximidade de escola",{exact:true})).toBeVisible();
+ await expect(page.getByText("Mínimo de 2 quartos",{exact:true})).toBeVisible();
+ await expect(page.locator(".assistant-recommendation").first().getByLabel("Fotografia não disponível")).toBeVisible();
+ await page.screenshot({path:info.outputPath("assistant-search.png")});
+ await page.locator(".assistant-recommendation").first().getByRole("link",{name:"Ver imóvel",exact:true}).click();
+ await expect(page).toHaveURL(/\/imovel\/2\//);
+ await expect(page.locator(".question-turn")).toHaveCount(1); expect(calls).toHaveLength(1);
+ await send(page,"Quais taxas estão incluídas?");
+ expect(calls[1].selected_listing_id).toBe("2"); expect(calls[1].search_token).toBeTruthy(); expect((calls[1].history as unknown[]).length).toBe(2);
+ await expect(page.getByRole("link",{name:"Fonte do imóvel"})).toBeVisible();
+ const before=calls[1].search_token;
+ await send(page,"Não gostei, quero outro mais barato");
+ expect(calls[2].selected_listing_id).toBe("2"); expect(calls[2].search_token).not.toBe(before);
+ await expect(page.getByText("Buscando outras opções. O anúncio aberto na página não está selecionado na conversa.")).toBeVisible();
+ await expect(page).toHaveURL(/\/imovel\/2\//);
+ await send(page,"agora com garagem, mantenha os dois quartos");
+ expect(calls[3].selected_listing_id).toBeNull();
+ expect((calls[3].history as unknown[]).length).toBe(6);
+ await expect(page.getByText("Mínimo de 1 vagas",{exact:true})).toBeVisible();
+ const token=calls[3].search_token; expect(token).toBeTruthy(); expect(page.url()).not.toContain(String(token));
+});
+test("clareza, no_results e token inválido exigem ação explícita sem reenvio",async({page})=>{
+ const calls:Record<string,unknown>[]=[]; page.on("request",r=>{if(r.url().includes("/api/assistente/mensagens"))calls.push(r.postDataJSON());});
+ await open(page); await send(page,"Quero alugar"); await expect(page.getByText("Em qual cidade você procura?",{exact:true})).toBeVisible();
+ await send(page,"Curitiba sem resultados"); await expect(page.getByText("Não há novas opções para estes critérios e as exclusões desta conversa.",{exact:false})).toBeVisible();
+ await page.locator("#property-question").fill("Token expirado"); await page.locator("#property-question").press("Enter");
+ await expect(page.locator(".question-error")).toContainText("memória da busca expirou");
+ const count=calls.length;
+ await expect(page.locator("#property-question")).toHaveValue("Token expirado");
+ await page.locator(".question-error").getByRole("button",{name:"Iniciar nova busca",exact:true}).click();
+ expect(calls).toHaveLength(count); await expect(page.locator(".question-turn")).toHaveCount(0);
+ await page.locator("#property-question").fill("Quero comprar em Curitiba"); await page.locator("#property-question").press("Enter");
+ await expect.poll(()=>calls.length).toBe(count+1);expect(calls.at(-1)?.search_token).toBeNull();expect(calls.at(-1)?.selected_listing_id).toBeNull();
+});
+test("limpar cancela resposta atrasada e não restaura seleção; reiniciar imóvel é explícito",async({page})=>{
+ let release!:()=>void;
+ const delayed=new Promise<void>(resolve=>release=resolve);
+ await page.route("**/api/assistente/mensagens",async route=>{await delayed; await route.fulfill({json:{data:assistantResponse({mode:"property",action:"answer",selected_listing_id:2,answer:"RESPOSTA ANTIGA"})}}).catch(()=>{});});
+ await open(page,detail); await page.locator("#property-question").fill("Taxas?"); await page.locator("#property-question").press("Enter");
+ await expect(page.getByRole("button",{name:"Cancelar envio",exact:true})).toBeVisible();
+ await page.getByRole("button",{name:"Limpar conversa",exact:true}).click(); release();
+ await expect(page.getByRole("heading",{name:"Encontre seu imóvel",exact:true})).toBeVisible();
+ await expect(page.getByText("RESPOSTA ANTIGA",{exact:true})).toHaveCount(0);
+ await page.getByText("Opções e privacidade",{exact:true}).click();
+ await page.getByRole("button",{name:"Recomeçar sobre este imóvel",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"Faça qualquer pergunta sobre o imóvel",exact:true})).toBeVisible();
+});
+test("cards e textos não executam HTML; preço anual não vira mensal e taxas desconhecidas não viram zero",async({page})=>{
+ await page.route("**/api/assistente/mensagens",r=>r.fulfill({json:{data:assistantResponse({action:"recommendations",answer:"<script>alert(1)</script>",recommendations:[{...recommendation(2),price:null,price_type:"on_request",original_url:"javascript:alert(1)"},{...recommendation(3),price_type:"yearly",currency:"USD",availability:"reserved",warnings:["Imóvel consta como reservado."],pricing:{charges:[{label:"IPTU",amount:"120.00",period:"yearly"}]}}]})}}));
+ await open(page); await send(page,"Quero alugar em Curitiba");
+ const cards=page.locator(".assistant-recommendation");
+ await expect(cards.first()).toContainText("Preço não informado");
+ await expect(cards.nth(1)).toContainText("USD 2.100,00");await expect(cards.nth(1).locator(".property-price")).toContainText("/ano");
+ await expect(cards.first().locator("a[href^='javascript']")).toHaveCount(0);
+ await expect(page.locator(".property-questions script")).toHaveCount(0);
+ await cards.first().getByText("Preço e taxas informados",{exact:true}).click();
+ await expect(cards.first()).toContainText("Condomínio: Preço não informado");
+ await expect(cards.first()).toContainText("120,00/ano");
+});

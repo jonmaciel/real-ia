@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 const detail = "/imovel/2/um-novo-capitulo-no-agua-verde";
 test("janela abre em 20 segundos sem geração ou roubo de foco e não reabre após minimizar", async ({page}, info) => {
- let requests=0; page.on("request",r=>{if(r.url().includes("/perguntas"))requests++;});
+ let requests=0; page.on("request",r=>{if(r.url().includes("/assistente/mensagens"))requests++;});
  await page.clock.install(); await page.goto(detail);
  const launcher=page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true});
  await expect(launcher).toBeVisible();
@@ -20,11 +20,8 @@ test("conta tempo entre páginas e oferece contexto apenas ao abrir um imóvel",
  await page.clock.install(); await page.goto("/");
  await expect(page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true})).toBeVisible();
  await page.clock.fastForward(20000); const dialog=page.getByRole("dialog",{name:"Converse com o Morada"});
- await expect(dialog.getByRole("link",{name:"Explorar imóveis"})).toBeVisible();
- await expect(page.getByLabel("Sua pergunta sobre o imóvel")).toHaveCount(0);
- await dialog.getByRole("link",{name:"Explorar imóveis"}).click();
- await page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true}).click();
- await expect(dialog).toBeVisible();
+ await expect(dialog.getByRole("heading",{name:"Encontre seu imóvel",exact:true})).toBeVisible();
+ await expect(page.getByLabel("O que você procura?")).toBeVisible();
  await page.goto("/auth/login"); await expect(page.locator(".property-chat-widget")).toHaveCount(0);
 });
 test("abertura automática aguarda formulário ativo",async({page})=>{

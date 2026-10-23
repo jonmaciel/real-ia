@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MouseEvent } from "react";
 import { PropertyCover } from "./property-cover";
 import { ArrowRight, ArrowUpRight, House, MapPin, BedDouble, Columns3 } from "lucide-react";
 import type { Category, Listing } from "@/lib/contracts";
@@ -10,7 +11,7 @@ import {
   period,
   propertyHref,
 } from "@/lib/presentation";
-export function PropertyPrice({ property }: { property: Listing }) {
+export function PropertyPrice({ property }: { property: Omit<Listing, "category_id"> }) {
   return (
     <div className="property-price">
       {money(property.price, property.currency)}{" "}
@@ -22,7 +23,7 @@ export function PropertyFeatures({
   property,
   category,
 }: {
-  property: Listing;
+  property: Omit<Listing, "category_id">;
   category?: Category;
 }) {
   return (
@@ -43,14 +44,19 @@ export function PropertyFeatures({
 export function PropertyCard({
   property,
   category,
+  onSelect,
 }: {
-  property: Listing;
+  property: Omit<Listing, "category_id">;
   category?: Category;
+  onSelect?: (id: string) => void;
 }) {
+  function choose(event: MouseEvent<HTMLAnchorElement>) {
+    if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) onSelect?.(String(property.id));
+  }
   return (
     <article className="property-card">
       <Link
-        href={propertyHref(property)}
+        href={propertyHref(property)} onClick={onSelect ? choose : undefined}
         className="card-media"
         aria-label={`Ver ${property.title}`}
       >
@@ -68,12 +74,12 @@ export function PropertyCard({
             "Localização não informada"}
         </p>
         <h3>
-          <Link href={propertyHref(property)}>{property.title}</Link>
+          <Link href={propertyHref(property)} onClick={onSelect ? choose : undefined}>{property.title}</Link>
         </h3>
         <PropertyFeatures property={property} category={category} />
         <div className="card-footer">
           <p className="property-availability">{availability(property.availability)}</p>
-          <Link className="card-detail-link" href={propertyHref(property)}>Ver imóvel <ArrowRight size={16} /></Link>
+          <Link className="card-detail-link" href={propertyHref(property)} onClick={onSelect ? choose : undefined}>Ver imóvel <ArrowRight size={16} /></Link>
         </div>
       </div>
     </article>

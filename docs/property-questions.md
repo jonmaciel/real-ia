@@ -1,5 +1,9 @@
 # Perguntas por imóvel
 
+> Atualização: a janela agora usa o fluxo unificado de busca/perguntas descrito em
+> [unified-assistant.md](unified-assistant.md). As descrições de histórico por imóvel
+> e do BFF de perguntas abaixo documentam a integração anterior/legada.
+
 O detalhe mantém uma única coluna direita: preço e contatos existentes, seguidos
 pelo assistente. A coluna é sticky com rolagem própria no desktop; no celular
 permanece no fluxo normal. Galeria, álbum e zoom não foram alterados.

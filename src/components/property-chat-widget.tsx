@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { MessageCircle, Minus, ArrowUpRight } from "lucide-react";
+import { MessageCircle, Minus } from "lucide-react";
+import { useAssistant } from "./assistant-provider";
 import { PropertyQuestions } from "./property-questions";
 
 export function PropertyChatWidget() {
   const pathname = usePathname();
-  const listingId = pathname.match(/^\/imovel\/([^/]+)\/[^/]+\/?$/)?.[1];
+  const { state } = useAssistant();
   const eligible = !/^\/(admin|auth|conta)(\/|$)/.test(pathname);
   const [open, setOpen] = useState(false);
   const interacted = useRef(false);
@@ -44,11 +44,11 @@ export function PropertyChatWidget() {
     <section id="morada-chat-window" role="dialog" aria-modal="false" aria-labelledby="chat-window-title" className="chat-window" hidden={!open} onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); minimize(); } }}>
       <header className="chat-window-header">
         <span className="chat-avatar"><MessageCircle size={22} aria-hidden="true" /></span>
-        <div><h2 id="chat-window-title" ref={heading} tabIndex={-1}>Converse com o Morada</h2><p>{listingId ? "Sobre o imóvel que você está vendo" : "Seu próximo lugar começa aqui"}</p></div>
+        <div><h2 id="chat-window-title" ref={heading} tabIndex={-1}>Converse com o Morada</h2><p>{state.selectedId ? "Sobre o imóvel selecionado na conversa" : "Busque seu próximo lugar"}</p></div>
         <button type="button" onClick={minimize} aria-label="Minimizar conversa"><Minus size={22} aria-hidden="true" /></button>
       </header>
       <div className="chat-window-content">
-        {listingId ? <PropertyQuestions key={listingId} listingId={listingId} /> : <div className="chat-welcome"><h3>Vamos conhecer seu próximo lugar?</h3><p>Abra um anúncio para perguntar sobre preço, taxas e localização. As respostas usam os dados e as fontes daquele imóvel.</p><Link className="button primary" href="/buscar" onClick={minimize}>Explorar imóveis <ArrowUpRight size={17} aria-hidden="true" /></Link><small>Assistente de IA. Não agenda visitas nem envia mensagens aos anunciantes.</small></div>}
+        <PropertyQuestions />
       </div>
     </section>
     <button ref={launcher} type="button" className="chat-launcher" onClick={open ? minimize : show} aria-expanded={open} aria-controls="morada-chat-window" aria-label={open ? "Minimizar conversa" : "Abrir conversa com o Morada"}><MessageCircle size={24} aria-hidden="true" /><span>Fale com o Morada</span></button>

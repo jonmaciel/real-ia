@@ -1,8 +1,12 @@
 // Contrato isolado. Nunca importado pela aplicação de produção.
+import { assistantResponse, recommendation } from "./assistant-fixtures";
+import { assistantInputSchema } from "../src/lib/assistant-contracts";
 import { createServer } from "node:http";
 import { categories, listings } from "../src/lib/fixtures";
 const sessions = new Set<string>();
 let counter = 0;
+let assistantCounter = 0;
+const assistantSessions = new Map<string, { seen: number[]; filters: Record<string, unknown> }>();
 const adminTokens = new Set<string>();
 const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
   id,
@@ -86,6 +90,50 @@ createServer(async (req, res) => {
   for await (const chunk of req) text += chunk;
   const b = text ? JSON.parse(text) : {};
   const token = req.headers.authorization?.replace("Bearer ", "");
+  if (path === "/assistant/messages" && req.method === "POST") {
+    const parsed = assistantInputSchema.safeParse(b);
+    if (!parsed.success) return send(400, { error: { code: "invalid_request" } });
+    const input = parsed.data;
+    if (input.question.startsWith("Erro")) {
+      const status = Number(input.question.slice(4));
+      if (status === 429) res.setHeader("Retry-After", "2");
+      return send(status, { error: { code: "test_error" } });
+    }
+    if (input.question === "Token expirado" || input.search_token === "expired") return send(400, { error: { code: "invalid_search_token" } });
+    const previous = input.search_token ? assistantSessions.get(input.search_token) : undefined;
+    const filters = { currency:"BRL", price_basis:"base", sort:"recommended", ...(previous?.filters ?? {}) } as Record<string,unknown>;
+    const seen = [...(previous?.seen ?? [])];
+    const nextToken = `contract-token-${++assistantCounter}`;
+    const q = input.question.toLowerCase();
+    if (q.includes("curitiba")) filters.city = "Curitiba";
+    if (q.includes("alugar")) filters.listing_type = "rental";
+    if (q.includes("comprar")) filters.listing_type = "sale";
+    if (q.includes("3.000")) filters.max_price = 3000;
+    if (q.includes("dois quartos")) filters.bedrooms = 2;
+    if (q.includes("pets")) filters.amenities = ["pet_friendly"];
+    if (q.includes("garagem")) filters.parking_spaces = 1;
+    if (q.includes("barato")) filters.sort = "price_asc";
+    const alternatives = /outro|outra|alternativa|mais barato|mais opções|garagem/.test(q);
+    if (alternatives && input.selected_listing_id) {
+      const selected = listings.find(row => String(row.id) === String(input.selected_listing_id));
+      filters.city ??= selected?.city; filters.listing_type ??= selected?.listing_type;
+    }
+    let result;
+    if (input.selected_listing_id && !alternatives) {
+      result = assistantResponse({mode:"property",action:"answer",selected_listing_id:input.selected_listing_id,answer:"Preço base informado pela origem. Taxas anuais e mensais devem ser consideradas separadamente. <script>alert(1)</script>",citations:[{id:"source-1",title:"Fonte do imóvel",url:"https://example.com/original",kind:"listing"},{id:"bad",title:"Inválida",url:"javascript:alert(1)",kind:"web"}],applied_filters:filters,search_token:nextToken});
+    } else {
+      if(input.selected_listing_id) seen.push(Number(input.selected_listing_id));
+      if(!filters.city || !filters.listing_type) result=assistantResponse({answer: !filters.city ? "Em qual cidade você procura?" : "Você quer comprar ou alugar?",applied_filters:filters,search_token:nextToken});
+      else if(q.includes("sem resultados")) result=assistantResponse({action:"no_results",answer:"Não encontrei novas opções para estes critérios.",applied_filters:filters,search_token:nextToken});
+      else {
+        const pool=[2,3,4,5,6,1].filter(id=>!seen.includes(id));
+        const ids=pool.slice(0,3); seen.push(...ids);
+        result=assistantResponse({action:ids.length ? "recommendations" : "no_results",answer:ids.length ? "Veja as opções do catálogo." : "Não encontrei novas opções.",recommendations:ids.map(recommendation),applied_filters:filters,unverified_preferences:["Proximidade de escola"],search_token:nextToken,has_more:pool.length>3,context_changed:!!input.selected_listing_id});
+      }
+    }
+    assistantSessions.set(nextToken,{seen,filters});
+    return send(200,{data:result});
+  }
   if (/^\/listings\/[^/]+\/questions$/.test(path) && req.method === "POST") {
     if (b.question?.startsWith("Erro")) {
       const status = Number(b.question.slice(4));
