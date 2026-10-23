@@ -6,6 +6,7 @@ import "@fontsource-variable/manrope";
 import "./globals.css";
 import "./portal.css";
 import "./neighborhood.css";
+import "./questions.css";
 import "leaflet/dist/leaflet.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3001"),

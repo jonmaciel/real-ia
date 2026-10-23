@@ -15,6 +15,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public code = "unavailable",
+    public retryAfter?: string,
   ) {
     super(code);
   }
@@ -41,7 +42,7 @@ export async function request(path: string, init: RequestInit = {}) {
   }
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new ApiError(response.status, body?.error?.code);
+    throw new ApiError(response.status, body?.error?.code, response.headers.get("Retry-After") ?? undefined);
   }
   if (response.status === 204 || response.status === 202) return null;
   return response.json();

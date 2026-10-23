@@ -1,0 +1,25 @@
+.detail-sidebar { grid-area: price; align-self: start; min-width: 0; position: sticky; top: 96px; max-height: calc(100dvh - 112px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-radius: 18px; }
+.detail .detail-sidebar .price-panel { position: static; }
+.property-questions { margin-top: 20px; padding: 24px; border: 1px solid var(--border); border-radius: 18px; background: #fff; }
+.questions-heading { display: flex; align-items: center; gap: 8px; color: #a43c0a; font-size: 12px; font-weight: 650; }
+.property-questions h2 { font-size: 23px; line-height: 1.25; margin: 14px 0; }
+.questions-note { display: block; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.question-suggestions { display: grid; gap: 8px; margin: 20px 0; }
+.question-suggestions button { text-align: left; background: #faf7f4; border: 1px solid #e4ddd6; border-radius: 10px; padding: 12px; font: inherit; font-size: 13px; color: var(--ink); min-height: 44px; cursor: pointer; }
+.property-questions textarea { width: 100%; resize: vertical; min-height: 88px; max-height: 200px; margin: 8px 0; }
+.property-questions form label { font-size: 13px; font-weight: 650; }
+.property-questions form small { display: block; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+.property-questions form .button { width: 100%; }
+.question-history { max-height: 360px; overflow-y: auto; overflow-wrap: anywhere; scrollbar-width: thin; }
+.question-turn { padding-bottom: 20px; font-size: 13px; line-height: 1.65; }
+.question-turn strong { display: block; margin-bottom: 6px; }
+.question-user { padding: 12px; border-radius: 12px; background: #fff2e9; white-space: pre-wrap; }
+.question-answer > p { white-space: pre-wrap; }
+.question-citations { padding-left: 18px; }
+.question-citations span, .question-answer small { display: block; font-size: 11px; color: var(--muted); }
+.question-citations a { text-decoration: underline; text-underline-offset: 3px; }
+.question-clear { display: block; border: 0; background: none; text-decoration: underline; min-height: 44px; color: var(--ink); cursor: pointer; margin-bottom: 8px; }
+.question-error { color: #a32b23; font-size: 13px; }
+.question-status { font-size: 12px; }
+.property-questions button:disabled { opacity: .6; cursor: default; }
+@media (max-width: 760px) { .detail-sidebar { position: static; max-height: none; overflow: visible; } .property-questions { padding: 22px; } }

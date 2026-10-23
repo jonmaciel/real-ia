@@ -86,6 +86,15 @@ createServer(async (req, res) => {
   for await (const chunk of req) text += chunk;
   const b = text ? JSON.parse(text) : {};
   const token = req.headers.authorization?.replace("Bearer ", "");
+  if (/^\/listings\/[^/]+\/questions$/.test(path) && req.method === "POST") {
+    if (b.question?.startsWith("Erro")) {
+      const status = Number(b.question.slice(4));
+      if (status === 429) res.setHeader("Retry-After", "2");
+      return send(status, { error: { code: "test_error" } });
+    }
+    if (Object.keys(b).some(k => !["question", "history"].includes(k))) return send(400, { error: { code: "invalid_request" } });
+    return send(200, { data: { answer: "Preço base informado pela origem. Taxas anuais e mensais devem ser consideradas separadamente. <script>alert(1)</script>", citations: [{ id: "source-1", title: "Fonte do imóvel", url: "https://example.com/original", kind: "listing" }, { id: "bad", title: "Inválida", url: "javascript:alert(1)", kind: "web" }], listing_id: path.split("/")[2], model: "gpt-6-luna", context_updated_at: "2026-10-23T12:00:00Z", web_search_used: false } });
+  }
   if (path === "/categories") return send(200, { data: categories });
   if (path === "/search") {
     const city = url.searchParams.get("city");
