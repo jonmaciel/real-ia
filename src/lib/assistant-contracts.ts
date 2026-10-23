@@ -3,12 +3,6 @@ import { listingSchema } from "./contracts";
 import { historyMessageSchema } from "./property-questions";
 export const assistantIdSchema = z.union([z.number().int().positive().safe(), z.string().regex(/^[1-9]\d{0,18}$/)]).refine(v => { try { return BigInt(v) <= 9223372036854775807n; } catch { return false; } });
 const token = z.string().min(1).max(24000).refine(v => new TextEncoder().encode(v).length <= 24000);
-export const assistantInputSchema = z.object({
-  question: z.string().trim().min(1).max(2000).refine(v => !v.includes("\u0000")),
-  history: z.array(historyMessageSchema).max(6).default([]),
-  selected_listing_id: assistantIdSchema.nullish().transform(v => v ?? null),
-  search_token: token.nullish().transform(v => v ?? null),
-}).strict().refine(v => v.history.reduce((sum, m) => sum + m.content.length, 0) <= 8000);
 const decimal = z.string().max(100).regex(/^\d+(\.\d+)?$/);
 const optionalText = z.string().nullish();
 export const pricingSchema = z.object({
@@ -30,13 +24,27 @@ export const assistantFiltersSchema = z.object({
   furnished: z.boolean().nullish(), amenities: z.array(z.string()).max(10).nullish(), preferred_amenities: z.array(z.string()).max(10).nullish(),
   price_basis: z.enum(["base", "total_monthly"]).nullish(), sort: z.enum(["recommended", "price_asc", "price_desc", "recent"]).nullish(),
 });
+export const assistantContextSchema = z.object({
+  page: z.enum(["home", "search", "listing", "other"]), current_filters: assistantFiltersSchema.strict().optional(),
+}).strict();
+export type AssistantPageContext = z.infer<typeof assistantContextSchema>;
+export const assistantInputSchema = z.object({
+  question: z.string().trim().min(1).max(2000).refine(v => !v.includes("\u0000")),
+  history: z.array(historyMessageSchema).max(6).default([]),
+  selected_listing_id: assistantIdSchema.nullish().transform(v => v ?? null),
+  search_token: token.nullish().transform(v => v ?? null),
+  context: assistantContextSchema.optional(),
+}).strict().refine(v => v.history.reduce((sum, m) => sum + m.content.length, 0) <= 8000);
 const citation = z.object({ id: z.string(), title: z.string(), url: z.string(), kind: z.enum(["listing", "web"]), start_index: z.number().int().optional(), end_index: z.number().int().optional() });
 export const assistantResponseSchema = z.object({ data: z.object({
-  mode: z.enum(["search", "property"]), action: z.enum(["recommendations", "clarify", "no_results", "answer"]),
+  mode: z.enum(["search", "property"]), action: z.enum(["recommendations", "clarify", "no_results", "answer", "traditional_search"]),
   answer: z.string().min(1).max(20000).refine(v => v.trim().length > 0), citations: z.array(citation).max(100), recommendations: z.array(recommendationSchema).max(3),
   selected_listing_id: assistantIdSchema.nullable(), applied_filters: assistantFiltersSchema,
   unverified_preferences: z.array(z.string().max(2000)).max(30), search_token: token,
   has_more: z.boolean(), context_changed: z.boolean(), model: z.string(), web_search_used: z.boolean(), context_updated_at: optionalText,
+  excluded_ids: z.array(assistantIdSchema).max(300).optional(),
+  filter_proposal: z.object({ filters: assistantFiltersSchema, excluded_ids: z.array(assistantIdSchema).max(300) }).nullish(),
+  ui_action: z.object({ type: z.literal("switch_search_tab"), tab: z.literal("traditional"), requires_confirmation: z.literal(false) }).strict().nullish(),
 }).refine(v => v.action === "recommendations" ? v.recommendations.length > 0 : v.recommendations.length === 0).refine(v => v.mode === "search" ? v.selected_listing_id === null && v.action !== "answer" : v.selected_listing_id !== null && v.action === "answer" && !v.recommendations.length) });
 export type AssistantResponse = z.infer<typeof assistantResponseSchema>["data"];
 export type Recommendation = z.infer<typeof recommendationSchema>;

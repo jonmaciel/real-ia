@@ -2,7 +2,7 @@
 import { listings } from "../src/lib/fixtures";
 import type { AssistantResponse } from "../src/lib/assistant-contracts";
 export function assistantResponse(overrides: Partial<AssistantResponse> = {}): AssistantResponse {
- return { mode:"search", action:"clarify", answer:"Em qual cidade você procura?", citations:[], recommendations:[], selected_listing_id:null, applied_filters:{currency:"BRL",price_basis:"base",sort:"recommended"}, unverified_preferences:[], search_token:"contract-token", has_more:false, context_changed:false, model:"gpt-6-luna", web_search_used:false, context_updated_at:"2026-10-23T12:00:00Z", ...overrides };
+ return { mode:"search", action:"clarify", answer:"Em qual cidade você procura?", citations:[], recommendations:[], selected_listing_id:null, applied_filters:{currency:"BRL",price_basis:"base",sort:"recommended"}, excluded_ids:[], unverified_preferences:[], search_token:"contract-token", has_more:false, context_changed:false, model:"gpt-6-luna", web_search_used:false, context_updated_at:"2026-10-23T12:00:00Z", ...overrides };
 }
 export function recommendation(id: number) {
  const row=listings.find(p=>Number(p.id)===id)!;

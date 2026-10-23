@@ -1,80 +1,69 @@
 # Assistente unificado: descoberta e perguntas
 
-Implementação no frontend Morada, mantendo a janela flutuante escolhida pelo
-operador, sua abertura em20s, teclado e comportamento mobile. Em `/buscar`, uma
-sanfona junto aos filtros também permite usar a mesma conversa. As duas superfícies
-nunca são exibidas simultaneamente.
+Implementação no frontend Morada. Em `/buscar`, a IA é a opção inicial e há
+somente uma lista de imóveis, atualizada a cada prompt. Filtros convencionais
+ficam na opção “Usar filtros”. A janela flutuante continua nas outras páginas
+públicas, com o mesmo estado de conversa, sem duplicar a busca nesta rota.
 
-## Arquitetura e continuidade
+## Lista única e continuidade
 
-`AssistantProvider`, no layout raiz, mantém um único estado em memória:
-mensagens visuais, seleção, token opaco mais recente, filtros e requisitos sem
-confirmação. Minimizar e navegação interna não apagam esse estado. Recarregar
-inicia outra visita. Nada é persistido em localStorage, URL ou analytics.
+`AssistantProvider` mantém histórico, token opaco, seleção, filtros e rascunho em
+memória. `/buscar` não renderiza o histórico nem os cards de `recommendations`.
+Seu input mostra apenas envio em andamento, erro ou “Lista atualizada” e uma
+pergunta de clarificação quando necessária. Cada nova resposta válida em modo
+search notifica a superfície ativa, que aplica `applied_filters` e exclusões na
+URL `/buscar?assistant=1&...`, sem mudar de página e sem clique adicional. Essa
+atualização automática foi explicitamente solicitada pelo usuário para a lista.
+As demais superfícies não adquirem autorização para navegação automática.
 
-`ListingConversationSelection` recebe do Server Component apenas o ID após
-getListing confirmar um imóvel público. Ao abrir um card, o ID validado é
-selecionado e a navegação usa propertyHref do catálogo. A seleção da conversa é
-independente do imóvel exibido na página. Resposta mode:search limpa a seleção;
-a montagem já existente da página não a restaura. Um novo clique/navegação para
-outro anúncio constitui uma seleção explícita. Nunca selecionamos o primeiro card.
+O Server Component consulta `GET /assistant/results` e renderiza a única grade
+principal. Não usa os três cards do chat como se fossem a lista completa, não
+filtra só a página em memória e não encaminha critérios avançados a `/search`.
+A consulta parcial já pode aplicar cidade/tipo enquanto a IA pergunta modalidade.
+Paginação, reload e voltar/avançar preservam critérios, preço base/total mensal,
+false, zeros, preferências e exclusões. Paginar não faz uma nova geração de IA.
+Uma nova mensagem reinicia a página. Token, pergunta e histórico não vão na URL.
 
-A resposta é a autoridade sobre modo, filtros, novas recomendações, exclusões,
-requisitos não verificados e continuidade. O frontend não interpreta linguagem
-natural, filtra a página recebida, cria imóveis ou inventa critérios. As respostas
-em modo busca preenchem o rascunho do formulário convencional; sua lista e URL
-só mudam quando o usuário envia o formulário.
+Os resultados anteriores ficam ocultos durante o envio/atualização. Erros de GET
+não são tratados como lista vazia nem substituídos pelo catálogo sem filtros.
+Só o total retornado pelo endpoint exato é mostrado como contagem global. Um
+`action:no_results` não determina vazio: o GET pode conter imóveis já vistos.
+A lista considera apenas exclusões explícitas, nunca todos os IDs vistos no chat.
 
-### Sanfona na busca
+O formulário manual permanece montado, mas oculto inicialmente. Ao selecioná-lo,
+mostra os campos atuais. Após busca por IA ele preserva os filtros avançados em
+campos ocultos e continua usando o endpoint exato; não perde tipo, mobília,
+comodidades, base de preço nem exclusões ao editar um limite de orçamento.
+O orçamento total mensal é rotulado corretamente. Busca manual independente
+continua usando seu contrato anterior, inclusive palavra-chave no título.
 
-“Prefere descrever? Busque com IA” inicia recolhida e abre por clique ou teclado,
-sem chamar a API. Ao abrir, uma seleção anterior de imóvel é removida, mantendo
-token, histórico e preferências para continuar a descoberta. Fechar, reabrir ou
-alternar para a janela flutuante preserva também o texto ainda não enviado.
-A janela não abre automaticamente enquanto a sanfona está em uso.
+Respostas de clarificação precisam fornecer exclusões autoritativas mesmo sem
+`filter_proposal`. A UI aceita `data.excluded_ids` ou os IDs de uma proposta
+validada; se ambos faltarem, mostra falha sem fabricar uma consulta incompleta.
+Não decodifica o token para reconstruir informações escondidas nele.
 
-Os critérios retornados em `applied_filters` aparecem acima da conversa e valem
-para as recomendações do assistente. Cada nova resposta `mode: search`, inclusive
-`action: clarify`, preenche cidade, bairro, modalidade e demais campos básicos
-do formulário. “Uma casa em Araucária” pode preencher a cidade enquanto a IA
-pergunta “comprar ou alugar?”. A modalidade não é presumida. O snapshot completo
-também remove critérios básicos anteriores ausentes, reseta a paginação e limpa
-palavra-chave/disponibilidade antigas que não fazem parte desse contrato.
-Preservamos os valores geográficos retornados, sem normalizar nomes no browser.
+## Dependência de backend e disponibilidade
 
-O formulário é um rascunho: editar, fechar a sanfona, digitar ou receber erro não
-o restaura para uma resposta antiga. Uma nova resposta de busca pode atualizá-lo;
-respostas sobre um imóvel não o alteram. Ao navegar, os filtros da URL têm
-prioridade, sem reaplicar uma conversa anterior. Voltar/avançar restaura os filtros
-efetivamente enviados. O formulário da homepage não recebe essa sincronização.
-
-Um aviso explica que a lista convencional só muda após “Buscar imóveis”. Tipos,
-quartos, área, mobília e comodidades são identificados como exclusivos das
-sugestões da conversa; nenhum parâmetro desconhecido vai para `/search`.
-Orçamento `total_monthly` nunca preenche limites de preço base; valores com
-precisão incompatível não são arredondados nem copiados. A integração de uma lista com
-todos esses critérios depende da publicação de `/assistant/filters` e
-`/assistant/results`; a primeira rota respondeu HTTP 404 no ambiente publicado
-durante esta implementação. Não há fallback para dados fictícios nem chamada
-a esses endpoints a partir da sanfona. Ela usa o BFF existente de mensagens.
-O prompt de verificação/ativação de suporte completo está em
-`docs/backend-assistant-filter-sync-prompt.txt`.
-
-Teste dedicado (fixtures de contrato, sem geração paga):
-`PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e -- tests/e2e/search-assistant.spec.ts`.
-
-Validação desta adição e da sincronização progressiva: 32 testes unitários e
-34 casos Playwright aprovados (sanfona, assistente, janela flutuante e jornadas
-do catálogo/conta em desktop/mobile). Build e typecheck
-aprovados; lint sem erros e com o aviso preexistente de `<img>` em
-`media-image.tsx`. Nenhuma nova geração paga de IA foi executada nesta validação.
+Em 23/10/2026, a checagem inicial retornou 404, mas a verificação final de
+`GET /assistant/filters` e `GET /assistant/results` retornou HTTP 200 em produção.
+A consulta real parcial por casa em Araucária retornou um imóvel e passou no
+schema Zod; o preço nulo foi preservado. São GETs sem geração de IA. O checkout
+local do backend está no commit 09dc6c3. Falta o ajuste descrito em
+`docs/backend-assistant-filter-sync-prompt.txt`: retornar `excluded_ids` em toda
+resposta search, inclusive clarificações, pois o envelope local ainda não o faz.
+A integração do frontend usa o contrato real documentado e nunca troca para mocks
+ou para a busca legada quando a consulta exata falha. Nenhum backend foi alterado
+por esta implementação. Nenhuma geração paga foi executada nesta validação.
 
 ## Contrato e BFF
 
 - Browser: POST `/api/assistente/mensagens`.
 - API: POST `/assistant/messages` relativo a LISTINGS_API_BASE_URL.
 - Base publicada: https://solo-leveling-api.onrender.com/api/v1/listings-platform .
-- Payload estrito: question, history, selected_listing_id, search_token. Nada mais.
+- Payload estrito: question, history, selected_listing_id, search_token e context
+  opcional com page/current_filters. Os quatro campos antigos continuam válidos.
+  Não enviamos HTML, modelo, fatos do imóvel ou instruções. O snapshot de filtros
+  aceitos só é enviado quando difere da conversa; não se reaplica estado antigo.
 - Zod valida os limites de2000 caracteres por mensagem,6 mensagens anteriores,
   8000 caracteres no histórico, IDs positivos até signed bigint e token até24000
   bytes. Não decodificamos nem editamos tokens.
@@ -92,8 +81,8 @@ modelos e limites continuam exclusivamente no backend. Nenhuma biblioteca nova.
 
 ## Interface e segurança
 
-Sem seleção: “Encontre seu imóvel”; com seleção: “Faça qualquer pergunta sobre
-o imóvel”. As mensagens anteriores continuam visíveis e identificadas como busca
+Na janela flutuante, sem seleção: “Encontre seu imóvel”; com seleção: “Faça qualquer pergunta sobre
+o imóvel”. As mensagens anteriores continuam visíveis nessa janela e identificadas como busca
 ou resposta sobre seu ID, sem reaproveitar fatos de outro anúncio como atuais.
 Cards usam PropertyCard/PropertyCover/PropertyPrice existentes; os contratos
 preservam composição, taxas, periodicidades, endereço autorizado, atributos e
@@ -135,11 +124,12 @@ histórico/token, mudança para busca sem reviver URL antiga, navegação por ca
 clareza/no_results, erros e reset explícito, cancelamento de resposta atrasada,
 preço anual/taxas ausentes, links/HTML inertes, desktop/mobile e galeria.
 
-A execução adicional das specs no checkout local do backend apresentou falhas
+Na validação inicial, a execução adicional das specs no checkout local do backend apresentou falhas
 nos request specs (400 esperado200). Esse checkout tinha alterações não
 commitadas em andamento no próprio contrato/planner/conversation e novos
-endpoints de filtros/resultados. Não alteramos esse repositório nem adotamos
-context/current_filters ou outros campos além dos quatro autorizados no pedido.
+endpoints de filtros/resultados. Naquela etapa não alteramos esse repositório nem adotamos
+context/current_filters ou outros campos além dos quatro do contrato anterior.
+Essa observação é histórica: a busca de lista única agora aceita o contexto opcional documentado.
 A disponibilidade do endpoint publicado foi verificada separadamente acima.
 
 Comandos:
@@ -148,6 +138,7 @@ npm run lint
 npm run typecheck
 npm test
 PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e -- tests/e2e/assistant.spec.ts tests/e2e/questions.spec.ts tests/e2e/chat-window.spec.ts tests/e2e/public-gallery.spec.ts
+PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e -- tests/e2e/search-assistant.spec.ts tests/e2e/assistant.spec.ts tests/e2e/journeys.spec.ts tests/e2e/chat-window.spec.ts tests/e2e/questions.spec.ts
 ```
 
 Validação inicial do assistente unificado, anterior à sanfona:30 testes unitários aprovados; suíte completa
@@ -159,3 +150,33 @@ esperar o novo modo search após limpar, conforme o contrato (não era falha da 
 Publicação autorizada pelo operador via ggpush após a validação local.
 A confirmação da rota publicada do backend não equivale a uma nova chamada
 real ao modelo nem à verificação deste frontend após o deploy.
+
+## Validação da lista única (23/10/2026)
+
+36 testes unitários e 46 casos Playwright aprovados em desktop/mobile: input de
+IA inicial, troca por teclado, consulta parcial na clarificação, refinamento da
+mesma grade, ausência de segunda lista, contexto/histórico, orçamento total,
+false/zeros, paginação/reload/voltar-avançar, erros sem fallback e ausência de
+exclusões autoritativas. Build e typecheck aprovados. Lint sem erros, com o aviso
+preexistente de img em media-image.tsx. Fixtures vivem somente em tests/.
+A validação real consistiu nos GETs acima; nenhuma nova chamada paga de IA
+foi executada e não se afirma que a clarificação esteja ativa em produção
+antes do ajuste de envelope do backend.
+
+## Rechecagem após o push do backend (23/10/2026)
+
+Foram verificados novamente em produção: catálogo de filtros HTTP 200 com todas
+as chaves esperadas; consulta parcial HTTP 200 com um imóvel; consulta avançada
+HTTP 200 preservando furnished=false, bedrooms=0, base total_monthly, preferências
+e exclusões; parâmetro desconhecido radius rejeitado com HTTP 400 invalid_request.
+Os envelopes de resultados passaram na validação Zod.
+
+Foi autorizada e executada uma única geração real, diretamente no endpoint da
+API para inspecionar o envelope sem depender do schema do frontend já publicado.
+A pergunta sintética sobre casa em Araucária retornou HTTP 200, mode=search,
+action=clarify, city=Araucária, property_type=house e “Você quer comprar ou alugar?”.
+O campo excluded_ids continuava ausente e filter_proposal era null. O contrato
+anterior é válido, mas ainda não fornece a informação necessária para aplicar
+com segurança a lista durante essa clarificação. Nenhum token foi registrado ou
+salvo. Não houve repetição de chamada paga. O remoto master do backend ainda
+apontava para 09dc6c3 na primeira consulta de referência deste teste.

@@ -7,8 +7,8 @@ import { PropertyQuestions } from "./property-questions";
 
 export function PropertyChatWidget() {
   const pathname = usePathname();
-  const { state, inlineSearchOpen } = useAssistant();
-  const eligible = !inlineSearchOpen && !/^\/(admin|auth|conta)(\/|$)/.test(pathname);
+  const { state } = useAssistant();
+  const eligible = !/^\/(admin|auth|conta|buscar)(\/|$)/.test(pathname);
   const [open, setOpen] = useState(false);
   const interacted = useRef(false);
   const allowed = useRef(eligible);
@@ -16,8 +16,7 @@ export function PropertyChatWidget() {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     allowed.current = eligible;
-    if (inlineSearchOpen) interacted.current = true;
-  }, [eligible, inlineSearchOpen]);
+  }, [eligible]);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     function offer() {

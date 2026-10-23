@@ -89,7 +89,7 @@ export function PropertyGrid({
   properties,
   category,
 }: {
-  properties: Listing[];
+  properties: Omit<Listing, "category_id">[];
   category?: Category;
 }) {
   return (

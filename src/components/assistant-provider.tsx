@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { assistantIdSchema, assistantResponseSchema } from "@/lib/assistant-contracts";
+import { assistantIdSchema, assistantResponseSchema, type AssistantPageContext, type AssistantResponse } from "@/lib/assistant-contracts";
 import { applyAssistantResponse, assistantPayload, emptyAssistantState, type AssistantState } from "@/lib/assistant-state";
 import { questionError, retrySeconds } from "@/lib/property-questions";
 function timestamp() { return Date.now(); }
@@ -14,10 +14,14 @@ function useAssistantController() {
   const [retryAt, setRetryAt] = useState(0);
   const [now, setNow] = useState(0);
   const [pageListingId, setPageListingId] = useState<string | null>(null);
-  const [inlineSearchOpen, setInlineSearchOpen] = useState(false);
   const pageRef = useRef<string | null>(null);
   const pending = useRef<AbortController | null>(null);
   const generation = useRef(0);
+  const searchListeners = useRef(new Set<(response: AssistantResponse) => void>());
+  const subscribeSearch = useCallback((listener: (response: AssistantResponse) => void) => {
+    searchListeners.current.add(listener);
+    return () => { searchListeners.current.delete(listener); };
+  }, []);
   const commit = useCallback((value: AssistantState) => { stateRef.current = value; setState(value); }, []);
   const cancel = useCallback((announce = true) => {
     generation.current++; pending.current?.abort(); pending.current = null; setBusy(false);
@@ -44,7 +48,7 @@ function useAssistantController() {
     if (!keepQuestion) setQuestion("");
     setStatus(keepQuestion ? "Busca reiniciada: preferências e exclusões anteriores foram apagadas. Envie a pergunta para continuar." : "Conversa limpa.");
   }
-  async function send(value: string) {
+  async function send(value: string, context?: AssistantPageContext) {
     const text = value.trim();
     if (pending.current || timestamp() < retryAt || !text || text.length > 2000) return;
     const snapshot = stateRef.current;
@@ -55,7 +59,7 @@ function useAssistantController() {
     try {
       const response = await fetch("/api/assistente/mensagens", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(assistantPayload(snapshot, text)), signal: AbortSignal.any([controller.signal, deadline]),
+        body: JSON.stringify(assistantPayload(snapshot, text, context)), signal: AbortSignal.any([controller.signal, deadline]),
       });
       if (version !== generation.current) return;
       if (!response.ok) {
@@ -71,6 +75,7 @@ function useAssistantController() {
         setError({ status: 502, code: "ai_invalid_response", message: questionError(502) }); setStatus("Resposta não pôde ser validada."); return;
       }
       commit(applyAssistantResponse(snapshot, text, result.data.data)); setQuestion("");
+      if (result.data.data.mode === "search") for (const listener of searchListeners.current) listener(result.data.data);
       setStatus(result.data.data.context_changed && result.data.data.mode === "search" ? "Buscando outras opções. Resposta recebida." : "Resposta recebida. Consulte os dados e as fontes.");
     } catch {
       if (version !== generation.current || controller.signal.aborted) return;
@@ -80,11 +85,12 @@ function useAssistantController() {
       if (version === generation.current) { pending.current = null; setBusy(false); }
     }
   }
-  function continueSearch() {
+  const continueSearch = useCallback(() => {
+    if (stateRef.current.mode === "search" && stateRef.current.selectedId === null) return;
     cancel(false); commit({ ...stateRef.current, selectedId: null, mode: "search" }); setError(null);
     setStatus("Seleção removida. Preferências e histórico mantidos; envie uma mensagem para continuar buscando.");
-  }
-  return { state, question, setQuestion, busy, error, status, continueSearch, inlineSearchOpen, setInlineSearchOpen, waiting: retryAt > now, secondsLeft: Math.max(0, Math.ceil((retryAt - now) / 1000)), send, cancel, select, registerPage, pageListingId, clear: () => reset(null), restartSearch: () => reset(null, true), restartProperty: () => reset(pageRef.current) };
+  }, [cancel, commit]);
+  return { state, question, setQuestion, busy, error, status, continueSearch, subscribeSearch, waiting: retryAt > now, secondsLeft: Math.max(0, Math.ceil((retryAt - now) / 1000)), send, cancel, select, registerPage, pageListingId, clear: () => reset(null), restartSearch: () => reset(null, true), restartProperty: () => reset(pageRef.current) };
 }
 const AssistantContext = createContext<ReturnType<typeof useAssistantController> | null>(null);
 export function AssistantProvider({ children }: { children: ReactNode }) {

@@ -1,32 +1,105 @@
 "use client";
-import { useEffect, useId } from "react";
-import { ChevronDown, Sparkles } from "lucide-react";
+import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowUp, SlidersHorizontal, Sparkles } from "lucide-react";
+import { assistantSearchParams, exactFiltersSchema, type AssistantSearch } from "@/lib/assistant-search";
+import type { AssistantFilters } from "@/lib/assistant-contracts";
 import { useAssistant } from "./assistant-provider";
-import { PropertyQuestions } from "./property-questions";
 
-export function SearchAssistant() {
+export function SearchAssistant({ manualForm, children, query, queryKey, resultError }: {
+  manualForm: ReactNode; children: ReactNode; query: AssistantSearch; queryKey: string; resultError?: string;
+}) {
   const chat = useAssistant();
-  const { inlineSearchOpen: open, setInlineSearchOpen } = chat;
-  const panelId = useId();
-  const titleId = useId();
-  useEffect(() => () => setInlineSearchOpen(false), [setInlineSearchOpen]);
-  function toggle() {
-    if (!open && chat.state.selectedId) chat.continueSearch();
-    setInlineSearchOpen(!open);
+  const { continueSearch, subscribeSearch } = chat;
+  const router = useRouter();
+  const [manual, setManual] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [updateError, setUpdateError] = useState(false);
+  const [expectedKey, setExpectedKey] = useState<string | null>(null);
+  const id = useId();
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const last = chat.state.turns.at(-1)?.response;
+  useEffect(() => { continueSearch(); }, [continueSearch]);
+  useEffect(() => subscribeSearch(last => {
+    if (last.action === "traditional_search" && last.ui_action?.type === "switch_search_tab") setManual(true);
+    // Complete authoritative exclusions are required, including during clarification.
+    // Never infer them from the opaque token or drop them to manufacture a list.
+    const excluded = last.excluded_ids ?? last.filter_proposal?.excluded_ids;
+    if (!excluded) { setUpdateError(true); return; }
+    try {
+      const params = assistantSearchParams({ filters: last.applied_filters, excludedIds: excluded.map(String), page: 1, perPage: query.perPage });
+      const key = params.toString();
+      setUpdateError(false); setExpectedKey(key);
+      startTransition(() => router.replace(`/buscar?${key}`, { scroll: false }));
+    } catch { setUpdateError(true); }
+  }), [subscribeSearch, query.perPage, router]);
+  const updating = chat.busy || pending;
+  const updated = expectedKey === queryKey && !resultError && !updateError;
+  const message = updating ? "Atualizando sua busca…"
+    : chat.error ? chat.error.message
+    : updateError || (expectedKey === queryKey && resultError) ? "Não foi possível atualizar a lista. Tente novamente em instantes."
+    : updated ? last?.action === "clarify" ? `Lista atualizada. ${last.answer}` : "Lista atualizada."
+    : "";
+  function send() {
+    if (updating) return;
+    setUpdateError(false);
+    try {
+    // Hydrate only when the accepted URL differs from the conversation snapshot.
+    const current = assistantSearchParams({ ...query, page: 1, excludedIds: [] }, false).toString();
+    let previous = "";
+    try { previous = assistantSearchParams({ filters: chat.state.filters, excludedIds: [], page: 1, perPage: query.perPage }, false).toString(); } catch { /* Invalid snapshots are never submitted. */ }
+    const snapshot: AssistantFilters = exactFiltersSchema.parse(query.filters);
+    for (const key of ["min_price", "max_price", "min_area", "max_area"] as const) if (snapshot[key] != null) snapshot[key] = Number(snapshot[key]);
+    void chat.send(chat.question, { page: "search", ...(current !== previous ? { current_filters: snapshot } : {}) });
+    } catch { setUpdateError(true); }
   }
-  return <section className="search-assistant" aria-labelledby={titleId}>
-    <h2>
-      <button type="button" id={titleId} className="search-assistant-toggle" aria-expanded={open} aria-controls={panelId} onClick={toggle}>
-        <span className="search-assistant-icon"><Sparkles size={20} aria-hidden="true" /></span>
-        <span><strong>Prefere descrever? Busque com IA</strong><small>Converse com o Morada e veja os critérios da sua busca.</small></span>
-        <ChevronDown size={20} className="search-assistant-chevron" aria-hidden="true" />
-      </button>
-    </h2>
-    <div id={panelId} hidden={!open}>
-      {open && <>
-        <p className="search-assistant-note">A cada resposta, a IA preenche os campos básicos acima, mesmo se ainda precisar perguntar algo. Revise e clique em “Buscar imóveis” para atualizar a lista. Características avançadas valem somente para as sugestões da conversa.</p>
-        <PropertyQuestions inline />
-      </>}
+  function restart() {
+    chat.restartSearch(); setExpectedKey(null); setUpdateError(false);
+    startTransition(() => router.replace("/buscar", { scroll: false }));
+    input.current?.focus();
+  }
+  return <div className="search-experience" data-manual={manual}>
+    <section className="search-assistant" aria-label="Busca de imóveis">
+      <div className="search-mode-bar">
+        <div role="tablist" aria-label="Como buscar" className="search-mode-tabs">
+          {[{ label: "Busca com IA", icon: Sparkles }, { label: "Usar filtros", icon: SlidersHorizontal }].map(({ label, icon: Icon }, index) => <button
+            key={label} ref={element => { tabs.current[index] = element; }} type="button" role="tab"
+            id={`${id}-tab-${index}`} aria-selected={Number(manual) === index} aria-controls={`${id}-panel-${index}`} tabIndex={Number(manual) === index ? 0 : -1}
+            onClick={() => setManual(Boolean(index))} onKeyDown={event => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              event.preventDefault(); const next = event.key === "Home" ? 0 : event.key === "End" ? 1 : 1 - index;
+              setManual(Boolean(next)); tabs.current[next]?.focus();
+            }}><Icon size={16} aria-hidden="true" />{label}</button>)}
+        </div>
+        {!manual && chat.state.turns.length > 0 && <button className="search-ai-restart" type="button" onClick={restart}>Nova busca</button>}
+      </div>
+      <div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={manual} className="search-ai-panel">
+        <form className="search-ai-composer" onSubmit={event => { event.preventDefault(); send(); }}>
+          <label htmlFor={`${id}-question`} className="sr-only">O que você procura?</label>
+          <textarea id={`${id}-question`} ref={input} rows={2} maxLength={2000} value={chat.question} disabled={updating}
+            placeholder="Ex.: uma casa em Araucária, para alugar até R$ 3.000. Você pode completar aos poucos."
+            onChange={event => chat.setQuestion(event.target.value)} onKeyDown={event => {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); }
+            }} aria-describedby={`${id}-help`} />
+          <button className="button primary" type="submit" aria-label={chat.error ? "Tentar novamente" : "Enviar busca"} title="Enviar busca"
+            disabled={updating || chat.waiting || !chat.question.trim() || chat.error?.code === "invalid_search_token" || chat.error?.status === 404}>
+            <ArrowUp size={20} aria-hidden="true" />
+          </button>
+          <span id={`${id}-help`} className="sr-only">Descreva o imóvel, a cidade e o orçamento. Enter envia; Shift mais Enter quebra linha. Até 2.000 caracteres. A IA pode errar.</span>
+        </form>
+        <p className="search-ai-status" role="status" aria-live="polite" aria-atomic="true">{message}{chat.waiting && ` Tente novamente em ${chat.secondsLeft} s.`}</p>
+        {chat.busy && <button type="button" className="search-ai-restart" onClick={() => chat.cancel()}>Cancelar envio</button>}
+        {(chat.error?.code === "invalid_search_token" || chat.error?.status === 404) && <button type="button" className="search-ai-restart" onClick={restart}>Iniciar nova busca</button>}
+      </div>
+      <div role="tabpanel" id={`${id}-panel-1`} aria-labelledby={`${id}-tab-1`} hidden={!manual} inert={updating}>
+        {manualForm}
+      </div>
+    </section>
+    <div className="main-search-results" aria-label="Imóveis da busca" aria-busy={updating}>
+      {updating ? <div className="search-results-loading" role="status">Atualizando imóveis…</div>
+        : updateError ? <div className="state-box"><p>Não foi possível atualizar os imóveis com os critérios da conversa.</p><button className="button secondary" type="button" onClick={() => { setManual(true); setUpdateError(false); }}>Usar filtros</button></div>
+        : children}
     </div>
-  </section>;
+  </div>;
 }

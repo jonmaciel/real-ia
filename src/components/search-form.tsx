@@ -4,17 +4,21 @@ import { Search, MapPin, ArrowRight } from "lucide-react";
 import type { Filters } from "@/lib/filters";
 import { assistantFormValues, searchFormValues, type SearchFormValues } from "@/lib/assistant-form-filters";
 import { useAssistant } from "./assistant-provider";
+import { assistantSearchParams, type AssistantSearch } from "@/lib/assistant-search";
 export function ConventionalSearchBar({
   filters,
   full = false,
+  assistantQuery,
 }: {
   filters?: Partial<Filters>;
   full?: boolean;
+  assistantQuery?: AssistantSearch;
 }) {
   const { state } = useAssistant();
   const response = state.turns.at(-1)?.response;
   const initial = searchFormValues(filters, full);
-  const source = JSON.stringify(initial);
+  if (assistantQuery?.filters.sort) initial.sort = assistantQuery.filters.sort;
+  const source = JSON.stringify(initial) + (assistantQuery ? assistantSearchParams(assistantQuery).toString() : "");
   const [draft, setDraft] = useState(() => ({ source, response, values: initial, fromAssistant: false, conversationOnly: [] as string[] }));
   // Adjust only when a new server response arrives, not on typing or rerenders.
   // A new URL restores its own filters without replaying an older conversation.
@@ -101,7 +105,7 @@ export function ConventionalSearchBar({
             name="min_price"
             type="number"
             min="0"
-            step="0.01"
+            step={assistantQuery ? "any" : "0.01"}
             placeholder={`${values.currency} sem mínimo`}
             value={values.min_price}
             onChange={e => update("min_price", e.target.value)}
@@ -114,7 +118,7 @@ export function ConventionalSearchBar({
             name="max_price"
             type="number"
             min="0"
-            step="0.01"
+            step={assistantQuery ? "any" : "0.01"}
             placeholder={`${values.currency} sem máximo`}
             value={values.max_price}
             onChange={e => update("max_price", e.target.value)}
@@ -126,7 +130,7 @@ export function ConventionalSearchBar({
       </div>
       {full && (
         <div className="advanced-fields">
-          <label>
+          {!assistantQuery && <label>
             <span>Palavra-chave no título</span>
             <input
               name="q"
@@ -135,10 +139,11 @@ export function ConventionalSearchBar({
               value={values.q}
               onChange={e => update("q", e.target.value)}
             />
-          </label>
+          </label>}
           <label>
             <span>Ordenar por</span>
             <select name="sort" value={values.sort} onChange={e => update("sort", e.target.value)}>
+              {assistantQuery && <option value="recommended">Correspondência no catálogo</option>}
               <option value="recent">Mais recentes</option>
               <option value="price_asc">Menor preço</option>
               <option value="price_desc">Maior preço</option>
@@ -153,7 +158,9 @@ export function ConventionalSearchBar({
           ) : null,
         )}
       <input type="hidden" name="currency" value={values.currency} />
-      {draft.fromAssistant && <div className="search-sync-note" role="status" aria-live="polite">
+      {assistantQuery && Array.from(assistantSearchParams(assistantQuery)).filter(([key]) => !["city", "neighborhood", "region", "country", "listing_type", "currency", "min_price", "max_price", "sort", "page", "per_page"].includes(key)).map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />)}
+      {assistantQuery && <p className="search-note">Base do orçamento: {assistantQuery.filters.price_basis === "total_monthly" ? "total mensal informado pela origem" : "preço anunciado"}. Os demais critérios da conversa são preservados.</p>}
+      {draft.fromAssistant && !assistantQuery && <div className="search-sync-note" role="status" aria-live="polite">
         <p>Campos básicos preenchidos pela conversa. Revise e clique em “Buscar imóveis” para atualizar a lista. Você pode editar os campos; a próxima resposta da IA poderá atualizá-los.</p>
         {draft.conversationOnly.length > 0 && <p>Somente nas sugestões da conversa: {draft.conversationOnly.join("; ")}. A busca convencional não aplica esses critérios.</p>}
       </div>}

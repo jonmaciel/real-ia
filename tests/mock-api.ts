@@ -1,6 +1,8 @@
 // Contrato isolado. Nunca importado pela aplicação de produção.
 import { assistantResponse, recommendation } from "./assistant-fixtures";
 import { assistantInputSchema } from "../src/lib/assistant-contracts";
+import { parseAssistantSearch } from "../src/lib/assistant-search";
+import { assistantCatalog } from "./assistant-search-fixtures";
 import { createServer } from "node:http";
 import { categories, listings } from "../src/lib/fixtures";
 const sessions = new Set<string>();
@@ -90,6 +92,23 @@ createServer(async (req, res) => {
   for await (const chunk of req) text += chunk;
   const b = text ? JSON.parse(text) : {};
   const token = req.headers.authorization?.replace("Bearer ", "");
+  if (path === "/assistant/results") {
+    try {
+      const query = parseAssistantSearch(Object.fromEntries(url.searchParams));
+      const f = query.filters;
+      if (f.city === "Erro404" || f.city === "Erro503") return send(Number(f.city.slice(4)), { error: { code: "unavailable" } });
+      const data = assistantCatalog.filter(row => {
+        const attrs: Record<string, unknown> = row.real_estate ?? {};
+        const amount = f.price_basis === "total_monthly" ? row.pricing?.total_amount : row.price;
+        return !query.excludedIds.includes(String(row.id)) && (!f.city || row.city === f.city) && (!f.listing_type || row.listing_type === f.listing_type)
+          && (!f.property_type || attrs.property_type === f.property_type) && (f.furnished == null || attrs.furnished === f.furnished)
+          && (f.bedrooms == null || Number(attrs.bedrooms) >= f.bedrooms) && (f.parking_spaces == null || Number(attrs.parking_spaces) >= f.parking_spaces)
+          && (f.min_price == null || amount != null && Number(amount) >= Number(f.min_price)) && (f.max_price == null || amount != null && Number(amount) <= Number(f.max_price));
+      });
+      const start = (query.page - 1) * query.perPage;
+      return send(200, { data: data.slice(start, start + query.perPage), meta: { page: query.page, per_page: query.perPage, total_count: data.length, has_more: start + query.perPage < data.length, applied_filters: f } });
+    } catch { return send(400, { error: { code: "invalid_request" } }); }
+  }
   if (path === "/assistant/messages" && req.method === "POST") {
     const parsed = assistantInputSchema.safeParse(b);
     if (!parsed.success) return send(400, { error: { code: "invalid_request" } });
@@ -101,14 +120,16 @@ createServer(async (req, res) => {
     }
     if (input.question === "Token expirado" || input.search_token === "expired") return send(400, { error: { code: "invalid_search_token" } });
     const previous = input.search_token ? assistantSessions.get(input.search_token) : undefined;
-    const filters = { currency:"BRL", price_basis:"base", sort:"recommended", ...(previous?.filters ?? {}) } as Record<string,unknown>;
+    const filters = { currency:"BRL", price_basis:"base", sort:"recommended", ...(input.context?.current_filters ?? previous?.filters ?? {}) } as Record<string,unknown>;
     const seen = [...(previous?.seen ?? [])];
     const nextToken = `contract-token-${++assistantCounter}`;
     const q = input.question.toLowerCase();
     if (q.includes("curitiba")) filters.city = "Curitiba";
+    if (/arauc[áa]ria/.test(q)) filters.city = "Araucária";
+    if (q.includes("casa")) filters.property_type = "house";
     if (q.includes("alugar")) filters.listing_type = "rental";
     if (q.includes("comprar")) filters.listing_type = "sale";
-    if (q.includes("3.000")) filters.max_price = 3000;
+    if (/3\.?000/.test(q)) filters.max_price = 3000;
     if (q.includes("dois quartos")) filters.bedrooms = 2;
     if (q.includes("pets")) filters.amenities = ["pet_friendly"];
     if (q.includes("garagem")) filters.parking_spaces = 1;

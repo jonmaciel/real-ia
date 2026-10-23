@@ -2,126 +2,62 @@ import Link from "next/link";
 import { ConventionalSearchBar } from "@/components/search-form";
 import { SearchAssistant } from "@/components/search-assistant";
 import { PropertyGrid, ErrorState, EmptyState } from "@/components/properties";
-import { search, realEstateCategory, errorMessage } from "@/lib/api";
-import { parseFilters, serialize } from "@/lib/filters";
-export const metadata = {
-  title: "Explorar imóveis",
-  robots: { index: false, follow: true },
-};
-export default async function Results({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+import { search, assistantSearch, realEstateCategory, errorMessage } from "@/lib/api";
+import { parseFilters, serialize, type Filters } from "@/lib/filters";
+import { assistantSearchParams, exactFiltersSchema, parseAssistantSearch, type AssistantSearch } from "@/lib/assistant-search";
+import { assistantFilterLabels } from "@/lib/assistant-presentation";
+export const metadata = { title: "Explorar imóveis", robots: { index: false, follow: true } };
+export default async function Results({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const raw = await searchParams;
-  let filters;
+  const exact = raw.assistant === "1";
+  let filters: Filters;
+  let query: AssistantSearch;
   try {
-    filters = parseFilters(raw);
+    if (exact) {
+      query = parseAssistantSearch(raw);
+      const f = query.filters;
+      filters = {
+        city: f.city ?? undefined, neighborhood: f.neighborhood ?? undefined, region: f.region ?? undefined, country: f.country ?? undefined,
+        listing_type: f.listing_type ?? undefined, currency: f.currency ?? "BRL", min_price: f.min_price == null ? undefined : String(f.min_price), max_price: f.max_price == null ? undefined : String(f.max_price),
+        sort: f.sort === "price_asc" || f.sort === "price_desc" ? f.sort : "recent", page: query.page, per_page: query.perPage,
+      };
+    } else {
+      if (raw.assistant !== undefined) throw new Error("invalid_request");
+      filters = parseFilters(raw);
+      query = { filters: Object.fromEntries(Object.entries(filters).filter(([key]) => key in exactFiltersSchema.shape)), excludedIds: [], page: filters.page, perPage: filters.per_page };
+    }
   } catch {
-    return (
-      <section className="section">
-        <ErrorState message="Confira os filtros: valores, faixa de preço e palavra-chave de até 200 caracteres." />
-      </section>
-    );
+    return <section className="section"><ErrorState message="Confira os filtros: valores, faixa de preço e palavra-chave de até 200 caracteres." /></section>;
   }
   let result;
   let category;
-  let error;
+  let error: string | undefined;
   try {
-    [result, category] = await Promise.all([
-      search(filters),
-      realEstateCategory(),
-    ]);
-  } catch (e) {
-    error = errorMessage(e);
-  }
-  const active = Object.entries(filters).filter(
-    ([k, v]) =>
-      !["page", "per_page", "sort"].includes(k) && v !== undefined && v !== "",
-  );
-  const labels: Record<string, string> = {
-    city: "Cidade",
-    neighborhood: "Bairro",
-    region: "Estado",
-    country: "País",
-    listing_type: "Modalidade",
-    currency: "Moeda",
-    min_price: "Preço mínimo",
-    max_price: "Preço máximo",
-    q: "Título",
-    availability: "Disponibilidade",
-  };
-  return (
-    <section className="section results">
-      <nav className="breadcrumb">
-        <Link href="/">Início</Link>
-        <span>/</span>Explorar imóveis
-      </nav>
-      <span className="eyebrow">O SEU LUGAR, DO SEU JEITO</span>
-      <h1>Explore novas possibilidades.</h1>
-      <details className="filter-panel" open>
-        <summary>Filtros de busca</summary>
-        <ConventionalSearchBar filters={filters} full />
-      </details>
-      <SearchAssistant />
+    [result, category] = await Promise.all([exact ? assistantSearch(query) : search(filters), realEstateCategory()]);
+  } catch (e) { error = errorMessage(e); }
+  const queryKey = exact ? assistantSearchParams(query).toString() : `legacy:${serialize(filters)}`;
+  const href = (page: number) => `/buscar?${exact ? assistantSearchParams({ ...query, page }) : serialize({ ...filters, page })}`;
+  const labels: Record<string, string> = { city: "Cidade", neighborhood: "Bairro", region: "Estado", country: "País", listing_type: "Modalidade", currency: "Moeda", min_price: "Preço mínimo", max_price: "Preço máximo", q: "Título", availability: "Disponibilidade" };
+  const active = Object.entries(filters).filter(([key, value]) => !["page", "per_page", "sort"].includes(key) && value !== undefined && value !== "");
+  return <section className="section results">
+    <nav className="breadcrumb"><Link href="/">Início</Link><span>/</span>Explorar imóveis</nav>
+    <span className="eyebrow">O SEU LUGAR, DO SEU JEITO</span>
+    <h1>Explore novas possibilidades.</h1>
+    <SearchAssistant query={query} queryKey={queryKey} resultError={error}
+      manualForm={<ConventionalSearchBar filters={filters} full assistantQuery={exact ? query : undefined} />}>
       <div className="results-toolbar">
-        <p>
-          {result ? `${result.data.length} imóveis nesta página` : "Imóveis"} ·
-          Página {filters.page}
-        </p>
+        <p>{result && "total_count" in result.meta ? `${result.meta.total_count} imóveis` : result ? `${result.data.length} imóveis nesta página` : "Imóveis"} · Página {query.page}</p>
         <Link href="/buscar">Limpar filtros</Link>
       </div>
       <div className="chips" aria-label="Filtros aplicados">
-        {active.map(([k, v]) =>
-          k === "currency" ? (
-            <span key={k}>
-              {labels[k]}: {String(v)}
-            </span>
-          ) : (
-            <Link
-              key={k}
-              aria-label={`Remover filtro ${labels[k]}`}
-              href={`/buscar?${(() => {
-                const next = { ...filters, page: 1 };
-                delete (next as Record<string, unknown>)[k];
-                return serialize(next);
-              })()}`}
-            >
-              {labels[k]}:{" "}
-              {v === "sale" ? "Compra" : v === "rental" ? "Aluguel" : String(v)}{" "}
-              ×
-            </Link>
-          ),
-        )}
+        {exact ? assistantFilterLabels(query.filters).map((label, index) => <span key={index}>{label}</span>) : active.map(([key, value]) => key === "currency" ? <span key={key}>Moeda: {String(value)}</span> : <Link key={key} aria-label={`Remover filtro ${labels[key]}`} href={`/buscar?${(() => { const next = { ...filters, page: 1 }; delete (next as Record<string, unknown>)[key]; return serialize(next); })()}`}>{labels[key]}: {value === "sale" ? "Compra" : value === "rental" ? "Aluguel" : String(value)} ×</Link>)}
       </div>
-      {error ? (
-        <ErrorState message={error} href={`/buscar?${serialize(filters)}`} />
-      ) : result?.data.length ? (
-        <PropertyGrid properties={result.data} category={category} />
-      ) : (
-        <EmptyState />
-      )}
-      {result && (
-        <nav className="pagination" aria-label="Paginação">
-          {filters.page > 1 && (
-            <Link
-              className="button secondary"
-              href={`/buscar?${serialize({ ...filters, page: filters.page - 1 })}`}
-            >
-              ← Anterior
-            </Link>
-          )}
-          <span>Página {filters.page}</span>
-          {result.meta.has_more && filters.page < 1000 && (
-            <Link
-              className="button primary"
-              href={`/buscar?${serialize({ ...filters, page: filters.page + 1 })}`}
-            >
-              Próxima →
-            </Link>
-          )}
-        </nav>
-      )}
-    </section>
-  );
+      {error ? <ErrorState message={error} href={href(query.page)} /> : result?.data.length ? <PropertyGrid properties={result.data} category={category} /> : <EmptyState />}
+      {result && <nav className="pagination" aria-label="Paginação">
+        {query.page > 1 && <Link className="button secondary" href={href(query.page - 1)}>← Anterior</Link>}
+        <span>Página {query.page}</span>
+        {result.meta.has_more && query.page < 1000 && <Link className="button primary" href={href(query.page + 1)}>Próxima →</Link>}
+      </nav>}
+    </SearchAssistant>
+  </section>;
 }

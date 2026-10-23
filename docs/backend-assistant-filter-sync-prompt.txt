@@ -1,48 +1,67 @@
-No backend /Users/jonmaciel/projects/solo_leveling_api, confira a sincronização
-progressiva de filtros do assistente Morada. Leia AGENTS.md, se existir, e
-docs/listings_platform/property-filters.md e property-search.md. Preserve os
-demais produtos e modelos. Não recrie endpoints já existentes.
+Faça um ajuste mínimo no backend do Morada em
+/Users/jonmaciel/projects/solo_leveling_api para a busca por IA atualizar a lista
+principal também durante perguntas de esclarecimento.
 
-O frontend já usa POST /api/v1/listings-platform/assistant/messages pelo BFF,
-com question, history, selected_listing_id e search_token. Cada resposta validada
-em mode=search, inclusive action=clarify, preenche o rascunho dos campos básicos
-a partir de applied_filters. Não extraímos filtros do texto da resposta.
-A lista/URL só muda quando o usuário clica Buscar imóveis.
+Rechecagem real após o push: os GETs de filtros/resultados estão disponíveis,
+incluindo consulta parcial e avançada. Uma única geração real retornou HTTP 200,
+action=clarify, cidade Araucária e tipo house, porém SEM excluded_ids e com
+filter_proposal=null. Portanto, ainda é necessário o ajuste de envelope abaixo.
 
-Contrato a confirmar e cobrir com specs:
-1. “uma casa em araucaria”, em uma nova conversa, retorna action=clarify,
-   mode=search, selected_listing_id=null e applied_filters contendo city e
-   property_type=house, mesmo sem listing_type. Pergunta comprar ou alugar sem
-   presumir modalidade. Use cidade consistente com a semântica da consulta.
-2. A mensagem seguinte “alugar” com o token anterior preserva cidade/tipo e
-   acrescenta listing_type=rental. Depois, orçamento e bairro também são
-   incrementais; remoções explícitas não ressuscitam restrições antigas.
-3. applied_filters é sempre o snapshot completo da conversa, não apenas o delta.
-   Ausência/null significa critério não selecionado; defaults seguem o contrato.
-   Preserve o estado/token na clarificação e não execute uma busca sem os
-   requisitos necessários. Retorne preferências sem evidência separadamente.
-4. A implementação local já aparenta aplicar updates antes de esclarecer
-   requisitos. Se os testes confirmarem isso, não há alteração de lógica exigida
-   para preencher o formulário; confirme somente a versão publicada.
+Leia AGENTS.md, se existir, e docs/listings_platform/property-filters.md e
+property-search.md. Preserve os demais produtos, treinos/quests, regras de revisão,
+limites, allowlist, assinatura/IP do BFF, privacidade e sessões.
 
-Para aplicar TODOS os critérios à lista (casa, quartos, área, comodidades,
-mobília, orçamento com taxas e ranking), precisamos dos GET /assistant/filters
-e /assistant/results documentados. /assistant/filters respondeu 404 em produção
-na verificação anterior do frontend. Confira deploy real dos endpoints existentes,
-migrations necessárias e contrato, sem presumir sucesso por causa de um push.
-Não adapte a semântica total_monthly para preço base nem descarte atributos
-silenciosamente para usar o endpoint legado /search.
+Contexto confirmado em 23/10/2026:
+- O checkout está no commit 09dc6c3.
+- GET /assistant/filters e GET /assistant/results responderam HTTP 200 em produção
+  na checagem final, após 404 anteriores. Não recrie essas rotas.
+- A consulta real GET /assistant/results?city=Arauc%C3%A1ria&property_type=house
+  &page=1&per_page=1 retornou um imóvel e passou no schema do frontend.
+  Isso confirma suporte a consulta parcial, sem listing_type. Não houve geração
+  paga de IA nessa verificação.
 
-Confirme também suporte opcional context.page/current_filters para que futuras
-edições manuais possam voltar à conversa como snapshot completo. Requisições
-legadas com os quatro campos devem continuar válidas. O BFF atual ainda não envia
-context: publique/confirme o contrato antes de solicitar essa integração ao FE.
-Não aceite HTML, modelo, instruções ou contexto factual do imóvel pelo browser.
+Nova UX explicitamente solicitada pelo usuário:
+Em /buscar, há um input e UMA lista principal. Cada prompt enviado atualiza essa
+lista automaticamente, sem segunda lista de recomendações e sem clique extra
+para aplicar os critérios. O campo mostra Atualizando… / Lista atualizada.
+Quando necessário, também mostra a pergunta do backend, como comprar ou alugar.
+Essa autorização vale só para atualizar a lista na rota /buscar; não autoriza
+redirecionar automaticamente o usuário da home ou de um detalhe.
 
-Preserve assinatura/IP do BFF, allowlist, limites/custos, privacidade, campos
-públicos e as proteções contra imóveis não publicados. Não aumente limites nem
-faça aprovações automáticas. Use fixtures nas specs e separe checagens HTTP sem
-IA de gerações pagas; não execute smoke tests pagos em loop.
+Ajuste necessário:
+Em app/services/listings_platform/assistant/conversation.rb, no envelope comum,
+acrescente excluded_ids: state.fetch("excluded_ids") ao objeto retornado.
+TODAS as respostas mode=search devem incluir esse snapshot completo, inclusive
+clarify, no_results e traditional_search, mesmo quando filter_proposal=null.
+Use [] quando não houver exclusões. Não use seen_ids: a lista pode repetir
+imóveis vistos antes; somente recusas/exclusões explícitas devem ser eliminadas.
+O frontend aceita IDs positivos como números ou strings. Não exponha o resto do
+estado interno nem decodifique/envie o search_token ao GET.
 
-Entregue resultados reais das specs, disponibilidade HTTP/commit publicado,
-qualquer mudança de contrato e pendências para integrar lista avançada no FE.
+Motivo: filter_proposal já traz excluded_ids quando existe uma proposta, mas as
+clarificações retornam filter_proposal=null. Sem esse campo no envelope, o FE não
+pode reconstruir as exclusões do token opaco nem consultar uma lista fiel.
+Ele mostra falha explicitamente se ambos estiverem ausentes; não inventa filtros.
+
+Valide com specs simuladas:
+1. “uma casa em araucaria” retorna city + property_type=house, excluded_ids e a
+   pergunta comprar ou alugar. O GET com os filtros parciais já atualiza a lista.
+2. “alugar” com o token anterior mantém cidade/tipo, acrescenta rental e não
+   ressuscita restrições antigas. applied_filters continua sendo snapshot completo.
+3. Recusar um imóvel preserva sua exclusão durante clarificações; começar nova
+   busca explicitamente limpa as exclusões, sem excluir todos os vistos no chat.
+4. Os quatro campos antigos continuam válidos. context.page/current_filters
+   opcionais e estritos continuam funcionando; desconhecidos são rejeitados.
+5. GET preserva moeda, preço base versus total mensal, false, zeros, comodidades,
+   preferências, área/quartos, exclusões e paginação; lista vazia é 200/data=[].
+
+O FE já mantém todos esses critérios em /buscar?assistant=1&..., remove apenas
+esse marcador ao consultar a API no servidor Next e usa o GET exato, sem fallback
+para /search nem mocks. O histórico/token ficam em memória e fora da URL.
+Não há geração a cada tecla, GET, alternância de aba ou paginação.
+
+Não adicione migration, gem, endpoint ou configuração de IA sem necessidade.
+Não aprove anúncios para testar. Rode specs pertinentes, faça commit/deploy conforme
+a autorização operacional do usuário e confirme a versão publicada. GETs podem
+validar implantação sem IA; não rode smoke tests pagos em loop. Relate o resultado
+das specs e entregue um exemplo sanitizado do novo envelope, sem chaves/tokens.

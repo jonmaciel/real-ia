@@ -10,6 +10,7 @@ import {
 } from "./contracts";
 import { serialize, type Filters } from "./filters";
 import * as fixtures from "./fixtures";
+import { assistantResultsSchema, assistantSearchParams, type AssistantSearch } from "./assistant-search";
 export const demo = process.env.DEMO_MODE === "true";
 export class ApiError extends Error {
   constructor(
@@ -99,6 +100,10 @@ export async function search(filters: Filters) {
   if (result.data.some((p) => String(p.category_id) !== String(category.id)))
     throw new ApiError(502, "category_mismatch");
   return result;
+}
+export async function assistantSearch(query: AssistantSearch) {
+  // Exact assistant semantics; never fall back to the conventional search or fixtures.
+  return assistantResultsSchema.parse(await request(`/assistant/results?${assistantSearchParams(query, false)}`, { headers: { Accept: "application/json" } }));
 }
 export const getListing = cache(async (id: string) => {
   const category = await realEstateCategory();
