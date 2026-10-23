@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ConventionalSearchBar } from "@/components/search-form";
+import { SearchAssistant } from "@/components/search-assistant";
 import { PropertyGrid, ErrorState, EmptyState } from "@/components/properties";
 import { search, realEstateCategory, errorMessage } from "@/lib/api";
 import { parseFilters, serialize } from "@/lib/filters";
@@ -62,6 +63,7 @@ export default async function Results({
         <summary>Filtros de busca</summary>
         <ConventionalSearchBar filters={filters} full />
       </details>
+      <SearchAssistant />
       <div className="results-toolbar">
         <p>
           {result ? `${result.data.length} imóveis nesta página` : "Imóveis"} ·

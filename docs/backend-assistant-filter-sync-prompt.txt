@@ -1,0 +1,48 @@
+No backend /Users/jonmaciel/projects/solo_leveling_api, confira a sincronização
+progressiva de filtros do assistente Morada. Leia AGENTS.md, se existir, e
+docs/listings_platform/property-filters.md e property-search.md. Preserve os
+demais produtos e modelos. Não recrie endpoints já existentes.
+
+O frontend já usa POST /api/v1/listings-platform/assistant/messages pelo BFF,
+com question, history, selected_listing_id e search_token. Cada resposta validada
+em mode=search, inclusive action=clarify, preenche o rascunho dos campos básicos
+a partir de applied_filters. Não extraímos filtros do texto da resposta.
+A lista/URL só muda quando o usuário clica Buscar imóveis.
+
+Contrato a confirmar e cobrir com specs:
+1. “uma casa em araucaria”, em uma nova conversa, retorna action=clarify,
+   mode=search, selected_listing_id=null e applied_filters contendo city e
+   property_type=house, mesmo sem listing_type. Pergunta comprar ou alugar sem
+   presumir modalidade. Use cidade consistente com a semântica da consulta.
+2. A mensagem seguinte “alugar” com o token anterior preserva cidade/tipo e
+   acrescenta listing_type=rental. Depois, orçamento e bairro também são
+   incrementais; remoções explícitas não ressuscitam restrições antigas.
+3. applied_filters é sempre o snapshot completo da conversa, não apenas o delta.
+   Ausência/null significa critério não selecionado; defaults seguem o contrato.
+   Preserve o estado/token na clarificação e não execute uma busca sem os
+   requisitos necessários. Retorne preferências sem evidência separadamente.
+4. A implementação local já aparenta aplicar updates antes de esclarecer
+   requisitos. Se os testes confirmarem isso, não há alteração de lógica exigida
+   para preencher o formulário; confirme somente a versão publicada.
+
+Para aplicar TODOS os critérios à lista (casa, quartos, área, comodidades,
+mobília, orçamento com taxas e ranking), precisamos dos GET /assistant/filters
+e /assistant/results documentados. /assistant/filters respondeu 404 em produção
+na verificação anterior do frontend. Confira deploy real dos endpoints existentes,
+migrations necessárias e contrato, sem presumir sucesso por causa de um push.
+Não adapte a semântica total_monthly para preço base nem descarte atributos
+silenciosamente para usar o endpoint legado /search.
+
+Confirme também suporte opcional context.page/current_filters para que futuras
+edições manuais possam voltar à conversa como snapshot completo. Requisições
+legadas com os quatro campos devem continuar válidas. O BFF atual ainda não envia
+context: publique/confirme o contrato antes de solicitar essa integração ao FE.
+Não aceite HTML, modelo, instruções ou contexto factual do imóvel pelo browser.
+
+Preserve assinatura/IP do BFF, allowlist, limites/custos, privacidade, campos
+públicos e as proteções contra imóveis não publicados. Não aumente limites nem
+faça aprovações automáticas. Use fixtures nas specs e separe checagens HTTP sem
+IA de gerações pagas; não execute smoke tests pagos em loop.
+
+Entregue resultados reais das specs, disponibilidade HTTP/commit publicado,
+qualquer mudança de contrato e pendências para integrar lista avançada no FE.

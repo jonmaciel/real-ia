@@ -14,6 +14,7 @@ function useAssistantController() {
   const [retryAt, setRetryAt] = useState(0);
   const [now, setNow] = useState(0);
   const [pageListingId, setPageListingId] = useState<string | null>(null);
+  const [inlineSearchOpen, setInlineSearchOpen] = useState(false);
   const pageRef = useRef<string | null>(null);
   const pending = useRef<AbortController | null>(null);
   const generation = useRef(0);
@@ -83,7 +84,7 @@ function useAssistantController() {
     cancel(false); commit({ ...stateRef.current, selectedId: null, mode: "search" }); setError(null);
     setStatus("Seleção removida. Preferências e histórico mantidos; envie uma mensagem para continuar buscando.");
   }
-  return { state, question, setQuestion, busy, error, status, continueSearch, waiting: retryAt > now, secondsLeft: Math.max(0, Math.ceil((retryAt - now) / 1000)), send, cancel, select, registerPage, pageListingId, clear: () => reset(null), restartSearch: () => reset(null, true), restartProperty: () => reset(pageRef.current) };
+  return { state, question, setQuestion, busy, error, status, continueSearch, inlineSearchOpen, setInlineSearchOpen, waiting: retryAt > now, secondsLeft: Math.max(0, Math.ceil((retryAt - now) / 1000)), send, cancel, select, registerPage, pageListingId, clear: () => reset(null), restartSearch: () => reset(null, true), restartProperty: () => reset(pageRef.current) };
 }
 const AssistantContext = createContext<ReturnType<typeof useAssistantController> | null>(null);
 export function AssistantProvider({ children }: { children: ReactNode }) {

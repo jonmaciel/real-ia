@@ -1,5 +1,9 @@
+"use client";
+import { useState } from "react";
 import { Search, MapPin, ArrowRight } from "lucide-react";
 import type { Filters } from "@/lib/filters";
+import { assistantFormValues, searchFormValues, type SearchFormValues } from "@/lib/assistant-form-filters";
+import { useAssistant } from "./assistant-provider";
 export function ConventionalSearchBar({
   filters,
   full = false,
@@ -7,6 +11,24 @@ export function ConventionalSearchBar({
   filters?: Partial<Filters>;
   full?: boolean;
 }) {
+  const { state } = useAssistant();
+  const response = state.turns.at(-1)?.response;
+  const initial = searchFormValues(filters, full);
+  const source = JSON.stringify(initial);
+  const [draft, setDraft] = useState(() => ({ source, response, values: initial, fromAssistant: false, conversationOnly: [] as string[] }));
+  // Adjust only when a new server response arrives, not on typing or rerenders.
+  // A new URL restores its own filters without replaying an older conversation.
+  if (source !== draft.source) {
+    setDraft({ source, response, values: initial, fromAssistant: false, conversationOnly: [] });
+  } else if (response !== draft.response) {
+    setDraft(full && response?.mode === "search"
+      ? { ...draft, response, ...assistantFormValues(draft.values, response.applied_filters), fromAssistant: true }
+      : { ...draft, response });
+  }
+  const values = draft.values;
+  function update(key: keyof SearchFormValues, value: string) {
+    setDraft(previous => ({ ...previous, values: { ...previous.values, [key]: value } }));
+  }
   return (
     <form
       action="/buscar"
@@ -20,7 +42,8 @@ export function ConventionalSearchBar({
               type="radio"
               name="listing_type"
               value=""
-              defaultChecked={!filters?.listing_type}
+              checked={!values.listing_type}
+              onChange={() => update("listing_type", "")}
             />
             <span>Todos</span>
           </label>
@@ -30,11 +53,8 @@ export function ConventionalSearchBar({
             type="radio"
             name="listing_type"
             value="sale"
-            defaultChecked={
-              full
-                ? filters?.listing_type === "sale"
-                : filters?.listing_type !== "rental"
-            }
+            checked={values.listing_type === "sale"}
+            onChange={() => update("listing_type", "sale")}
           />
           <span>Comprar</span>
         </label>
@@ -43,7 +63,8 @@ export function ConventionalSearchBar({
             type="radio"
             name="listing_type"
             value="rental"
-            defaultChecked={filters?.listing_type === "rental"}
+            checked={values.listing_type === "rental"}
+            onChange={() => update("listing_type", "rental")}
           />
           <span>Alugar</span>
         </label>
@@ -57,7 +78,8 @@ export function ConventionalSearchBar({
             name="city"
             placeholder="Digite a cidade"
             maxLength={120}
-            defaultValue={filters?.city}
+            value={values.city}
+            onChange={e => update("city", e.target.value)}
           />
         </label>
         <label>
@@ -68,7 +90,8 @@ export function ConventionalSearchBar({
             name="neighborhood"
             placeholder="Qualquer bairro"
             maxLength={120}
-            defaultValue={filters?.neighborhood}
+            value={values.neighborhood}
+            onChange={e => update("neighborhood", e.target.value)}
           />
         </label>
         <label>
@@ -79,8 +102,9 @@ export function ConventionalSearchBar({
             type="number"
             min="0"
             step="0.01"
-            placeholder={`${filters?.currency ?? "BRL"} sem mínimo`}
-            defaultValue={filters?.min_price}
+            placeholder={`${values.currency} sem mínimo`}
+            value={values.min_price}
+            onChange={e => update("min_price", e.target.value)}
           />
         </label>
         <label>
@@ -91,8 +115,9 @@ export function ConventionalSearchBar({
             type="number"
             min="0"
             step="0.01"
-            placeholder={`${filters?.currency ?? "BRL"} sem máximo`}
-            defaultValue={filters?.max_price}
+            placeholder={`${values.currency} sem máximo`}
+            value={values.max_price}
+            onChange={e => update("max_price", e.target.value)}
           />
         </label>
         <button className="button primary" type="submit">
@@ -107,12 +132,13 @@ export function ConventionalSearchBar({
               name="q"
               placeholder="Ex.: apartamento com varanda"
               maxLength={200}
-              defaultValue={filters?.q}
+              value={values.q}
+              onChange={e => update("q", e.target.value)}
             />
           </label>
           <label>
             <span>Ordenar por</span>
-            <select name="sort" defaultValue={filters?.sort ?? "recent"}>
+            <select name="sort" value={values.sort} onChange={e => update("sort", e.target.value)}>
               <option value="recent">Mais recentes</option>
               <option value="price_asc">Menor preço</option>
               <option value="price_desc">Maior preço</option>
@@ -122,14 +148,18 @@ export function ConventionalSearchBar({
       )}
       {full &&
         (["region", "country", "availability", "per_page"] as const).map((k) =>
-          filters?.[k] !== undefined ? (
-            <input key={k} type="hidden" name={k} value={String(filters[k])} />
+          values[k] !== "" ? (
+            <input key={k} type="hidden" name={k} value={values[k]} />
           ) : null,
         )}
-      <input type="hidden" name="currency" value={filters?.currency ?? "BRL"} />
+      <input type="hidden" name="currency" value={values.currency} />
+      {draft.fromAssistant && <div className="search-sync-note" role="status" aria-live="polite">
+        <p>Campos básicos preenchidos pela conversa. Revise e clique em “Buscar imóveis” para atualizar a lista. Você pode editar os campos; a próxima resposta da IA poderá atualizá-los.</p>
+        {draft.conversationOnly.length > 0 && <p>Somente nas sugestões da conversa: {draft.conversationOnly.join("; ")}. A busca convencional não aplica esses critérios.</p>}
+      </div>}
       <p className="search-note">
         Cidade e bairro devem corresponder ao nome publicado. Valores em{" "}
-        {filters?.currency ?? "BRL"}.
+        {values.currency}.
       </p>
     </form>
   );

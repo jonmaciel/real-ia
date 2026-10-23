@@ -1,7 +1,9 @@
 # Assistente unificado: descoberta e perguntas
 
 Implementação no frontend Morada, mantendo a janela flutuante escolhida pelo
-operador, sua abertura em20s, teclado e comportamento mobile. Não há segundo painel.
+operador, sua abertura em20s, teclado e comportamento mobile. Em `/buscar`, uma
+sanfona junto aos filtros também permite usar a mesma conversa. As duas superfícies
+nunca são exibidas simultaneamente.
 
 ## Arquitetura e continuidade
 
@@ -19,8 +21,53 @@ outro anúncio constitui uma seleção explícita. Nunca selecionamos o primeiro
 
 A resposta é a autoridade sobre modo, filtros, novas recomendações, exclusões,
 requisitos não verificados e continuidade. O frontend não interpreta linguagem
-natural, filtra a página recebida, cria imóveis ou inventa critérios. As buscas
-convencionais e suas URLs permanecem independentes.
+natural, filtra a página recebida, cria imóveis ou inventa critérios. As respostas
+em modo busca preenchem o rascunho do formulário convencional; sua lista e URL
+só mudam quando o usuário envia o formulário.
+
+### Sanfona na busca
+
+“Prefere descrever? Busque com IA” inicia recolhida e abre por clique ou teclado,
+sem chamar a API. Ao abrir, uma seleção anterior de imóvel é removida, mantendo
+token, histórico e preferências para continuar a descoberta. Fechar, reabrir ou
+alternar para a janela flutuante preserva também o texto ainda não enviado.
+A janela não abre automaticamente enquanto a sanfona está em uso.
+
+Os critérios retornados em `applied_filters` aparecem acima da conversa e valem
+para as recomendações do assistente. Cada nova resposta `mode: search`, inclusive
+`action: clarify`, preenche cidade, bairro, modalidade e demais campos básicos
+do formulário. “Uma casa em Araucária” pode preencher a cidade enquanto a IA
+pergunta “comprar ou alugar?”. A modalidade não é presumida. O snapshot completo
+também remove critérios básicos anteriores ausentes, reseta a paginação e limpa
+palavra-chave/disponibilidade antigas que não fazem parte desse contrato.
+Preservamos os valores geográficos retornados, sem normalizar nomes no browser.
+
+O formulário é um rascunho: editar, fechar a sanfona, digitar ou receber erro não
+o restaura para uma resposta antiga. Uma nova resposta de busca pode atualizá-lo;
+respostas sobre um imóvel não o alteram. Ao navegar, os filtros da URL têm
+prioridade, sem reaplicar uma conversa anterior. Voltar/avançar restaura os filtros
+efetivamente enviados. O formulário da homepage não recebe essa sincronização.
+
+Um aviso explica que a lista convencional só muda após “Buscar imóveis”. Tipos,
+quartos, área, mobília e comodidades são identificados como exclusivos das
+sugestões da conversa; nenhum parâmetro desconhecido vai para `/search`.
+Orçamento `total_monthly` nunca preenche limites de preço base; valores com
+precisão incompatível não são arredondados nem copiados. A integração de uma lista com
+todos esses critérios depende da publicação de `/assistant/filters` e
+`/assistant/results`; a primeira rota respondeu HTTP 404 no ambiente publicado
+durante esta implementação. Não há fallback para dados fictícios nem chamada
+a esses endpoints a partir da sanfona. Ela usa o BFF existente de mensagens.
+O prompt de verificação/ativação de suporte completo está em
+`docs/backend-assistant-filter-sync-prompt.txt`.
+
+Teste dedicado (fixtures de contrato, sem geração paga):
+`PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e -- tests/e2e/search-assistant.spec.ts`.
+
+Validação desta adição e da sincronização progressiva: 32 testes unitários e
+34 casos Playwright aprovados (sanfona, assistente, janela flutuante e jornadas
+do catálogo/conta em desktop/mobile). Build e typecheck
+aprovados; lint sem erros e com o aviso preexistente de `<img>` em
+`media-image.tsx`. Nenhuma nova geração paga de IA foi executada nesta validação.
 
 ## Contrato e BFF
 
@@ -103,7 +150,7 @@ npm test
 PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e -- tests/e2e/assistant.spec.ts tests/e2e/questions.spec.ts tests/e2e/chat-window.spec.ts tests/e2e/public-gallery.spec.ts
 ```
 
-Resultado final do frontend:30 testes unitários aprovados; suíte completa
+Validação inicial do assistente unificado, anterior à sanfona:30 testes unitários aprovados; suíte completa
 Playwright88 casos,85 aprovados e3 pulados por dispositivo, incluindo catálogo,
 contas, admin, mapa, galeria e assistente. Build de produção e typecheck aprovados;
 lint sem erros, com1 aviso preexistente em media-image.tsx. git diff --check limpo.

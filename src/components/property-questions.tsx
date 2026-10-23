@@ -6,7 +6,7 @@ import { assistantFilterLabels } from "@/lib/assistant-presentation";
 import { useAssistant } from "./assistant-provider";
 import { AssistantRecommendations } from "./assistant-recommendations";
 const propertySuggestions = ["Qual é o custo total?", "Quais taxas estão incluídas?", "Como é a localização?", "Tem mercado ou escola por perto?"];
-export function PropertyQuestions() {
+export function PropertyQuestions({ inline = false }: { inline?: boolean }) {
   const chat = useAssistant();
   const { state, question, busy, error, waiting } = chat;
   const propertyMode = state.mode === "property" && state.selectedId !== null;
@@ -15,19 +15,24 @@ export function PropertyQuestions() {
   useEffect(() => {
     if (latest.current?.offsetParent) {
       const target = latest.current.querySelector(".assistant-recommendation") ?? latest.current.querySelector(".question-answer") ?? latest.current;
-      target.scrollIntoView({ block: "start", behavior: "instant" });
+      if (inline) {
+        const scroller = latest.current.closest(".question-conversation");
+        if (scroller) scroller.scrollTop += target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+      } else target.scrollIntoView({ block: "start", behavior: "instant" });
       if (input.current && (document.activeElement === document.body || input.current.closest(".chat-window")?.contains(document.activeElement))) input.current.focus({ preventScroll: true });
     }
-  }, [state.turns.length]);
+  }, [state.turns.length, inline]);
   const filters = assistantFilterLabels(state.filters);
+  const criteria = filters.length > 0 && <details className="assistant-filters" open={state.mode === "search"}><summary>{inline ? "Critérios da conversa" : "Critérios efetivamente aplicados"}</summary><ul>{filters.map((label, i) => <li key={i}>{label}</li>)}</ul></details>;
   function clear() { chat.clear(); input.current?.focus(); }
-  return <section className="property-questions" aria-labelledby="questions-title">
+  return <section className={`property-questions${inline ? " inline-questions" : ""}`} aria-labelledby="questions-title">
+    {inline && criteria}
     <div className="question-conversation">
       <h2 id="questions-title">{propertyMode ? "Faça qualquer pergunta sobre o imóvel" : "Encontre seu imóvel"}</h2>
       <p className="questions-note">{propertyMode ? "Assistente de IA sobre o anúncio. Não confirma disponibilidade, negocia ou agenda visitas." : "Conte a cidade, o orçamento e o que você procura."}</p>
       {!propertyMode && chat.pageListingId && <p className="assistant-context">Buscando outras opções. O anúncio aberto na página não está selecionado na conversa.</p>}
       {propertyMode && <p className="assistant-context">Imóvel selecionado: #{state.selectedId}. Ao pedir alternativas, a conversa volta para a busca.</p>}
-      {filters.length > 0 && <details className="assistant-filters" open={state.mode === "search"}><summary>Critérios efetivamente aplicados</summary><ul>{filters.map((label, i) => <li key={i}>{label}</li>)}</ul></details>}
+      {!inline && criteria}
       {!state.turns.length && <div className="question-suggestions">{(propertyMode ? propertySuggestions : ["Quero alugar", "Quero comprar"]).map(s => <button type="button" key={s} disabled={busy || waiting} onClick={() => void chat.send(s)}>{s}</button>)}</div>}
       <div className="question-history" aria-label="Conversa com o Morada" tabIndex={state.turns.length ? 0 : undefined}>
         {state.turns.map((turn, i) => <div className="question-turn" key={i} ref={i === state.turns.length - 1 ? latest : undefined}>
