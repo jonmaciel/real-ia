@@ -12,7 +12,8 @@ export function emptyAssistantState(selectedId: string | null = null): Assistant
 export function applyAssistantResponse(state: AssistantState, question: string, response: AssistantResponse): AssistantState {
   return { turns: [...state.turns, { question, response }], selectedId: response.selected_listing_id === null ? null : String(response.selected_listing_id), token: response.search_token, mode: response.mode, filters: response.applied_filters, unverified: response.unverified_preferences, hasMore: response.has_more };
 }
-export function assistantPayload(state: AssistantState, question: string, context?: AssistantPageContext) {
+export function assistantMetadata(state: AssistantState, context?: AssistantPageContext) {
   const history: HistoryMessage[] = state.turns.flatMap(t => [{ role: "user", content: t.question }, { role: "assistant", content: t.response.answer }]);
-  return { question: question.trim(), history: boundedHistory(history), selected_listing_id: state.selectedId, search_token: state.token, ...(context ? { context } : {}) };
+  return { history: boundedHistory(history), selected_listing_id: state.selectedId, search_token: state.token, ...(context ? { context } : {}) };
 }
+export function assistantPayload(state: AssistantState, question: string, context?: AssistantPageContext) { return { question: question.trim(), ...assistantMetadata(state, context) }; }

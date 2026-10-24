@@ -1,13 +1,17 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Send } from "lucide-react";
 import { citationUrl } from "@/lib/property-questions";
 import { assistantFilterLabels } from "@/lib/assistant-presentation";
 import { useAssistant } from "./assistant-provider";
 import { AssistantRecommendations } from "./assistant-recommendations";
+import { AssistantAudio } from "./assistant-audio";
 const propertySuggestions = ["Qual é o custo total?", "Quais taxas estão incluídas?", "Como é a localização?", "Tem mercado ou escola por perto?"];
-export function PropertyQuestions({ inline = false }: { inline?: boolean }) {
+export function PropertyQuestions({ inline = false, active = true }: { inline?: boolean; active?: boolean }) {
   const chat = useAssistant();
+  const pathname = usePathname();
+  const [audioActive, setAudioActive] = useState(false);
   const { state, question, busy, error, waiting } = chat;
   const propertyMode = state.mode === "property" && state.selectedId !== null;
   const input = useRef<HTMLTextAreaElement>(null);
@@ -33,10 +37,10 @@ export function PropertyQuestions({ inline = false }: { inline?: boolean }) {
       {!propertyMode && chat.pageListingId && <p className="assistant-context">Buscando outras opções. O anúncio aberto na página não está selecionado na conversa.</p>}
       {propertyMode && <p className="assistant-context">Imóvel selecionado: #{state.selectedId}. Ao pedir alternativas, a conversa volta para a busca.</p>}
       {!inline && criteria}
-      {!state.turns.length && <div className="question-suggestions">{(propertyMode ? propertySuggestions : ["Quero alugar", "Quero comprar"]).map(s => <button type="button" key={s} disabled={busy || waiting} onClick={() => void chat.send(s)}>{s}</button>)}</div>}
+      {!state.turns.length && <div className="question-suggestions">{(propertyMode ? propertySuggestions : ["Quero alugar", "Quero comprar"]).map(s => <button type="button" key={s} disabled={busy || waiting || audioActive} onClick={() => void chat.send(s)}>{s}</button>)}</div>}
       <div className="question-history" aria-label="Conversa com o Morada" tabIndex={state.turns.length ? 0 : undefined}>
         {state.turns.map((turn, i) => <div className="question-turn" key={i} ref={i === state.turns.length - 1 ? latest : undefined}>
-          <p className="question-user"><strong>Você</strong>{turn.question}</p>
+          <p className="question-user"><strong>{turn.response.input_type === "audio" ? "Você · áudio transcrito" : "Você"}</strong>{turn.response.transcription?.text ?? turn.question}</p>
           <div className="question-answer"><strong>Morada</strong>
             <small>{turn.response.mode === "property" ? `Resposta sobre o imóvel #${turn.response.selected_listing_id}` : "Busca no catálogo"}</small>
             <p>{turn.response.answer}</p>
@@ -50,15 +54,16 @@ export function PropertyQuestions({ inline = false }: { inline?: boolean }) {
         </div>)}
       </div>
       {state.turns.at(-1)?.response.action === "no_results" && state.mode === "search" && <button className="button secondary assistant-more" type="button" onClick={chat.restartSearch}>Iniciar nova busca</button>}
-      {state.hasMore && state.mode === "search" && <button className="button secondary assistant-more" type="button" disabled={busy || waiting} onClick={() => void chat.send("Mostre mais opções")}>Mostrar mais opções</button>}
+      {state.hasMore && state.mode === "search" && <button className="button secondary assistant-more" type="button" disabled={busy || waiting || audioActive} onClick={() => void chat.send("Mostre mais opções")}>Mostrar mais opções</button>}
     </div>
-    <form onSubmit={e => { e.preventDefault(); void chat.send(question); }}>
+    <form onSubmit={e => { e.preventDefault(); if (!audioActive) void chat.send(question); }}>
       <label htmlFor="property-question">{propertyMode ? "Sua pergunta sobre o imóvel" : "O que você procura?"}</label>
-      <textarea id="property-question" ref={input} value={question} maxLength={2000} rows={3} disabled={busy} placeholder={propertyMode ? "Pergunte sobre preço, taxas ou peça outra opção…" : "Ex.: quero alugar em Curitiba, até R$ 3.000, com dois quartos e que aceite pets"} onChange={e => chat.setQuestion(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void chat.send(question); } }} aria-describedby="question-help" />
+      <textarea id="property-question" ref={input} value={question} maxLength={2000} rows={3} disabled={busy || audioActive} placeholder={propertyMode ? "Pergunte sobre preço, taxas ou peça outra opção…" : "Ex.: quero alugar em Curitiba, até R$ 3.000, com dois quartos e que aceite pets"} onChange={e => chat.setQuestion(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (!audioActive) void chat.send(question); } }} aria-describedby="question-help" />
       <small id="question-help">Enter envia · Shift + Enter quebra linha. {question.length}/2.000</small>
-      <button type="submit" className="button primary" disabled={busy || waiting || !question.trim() || error?.code === "invalid_search_token" || error?.status === 404}><Send size={16} aria-hidden="true" />{busy ? "Consultando…" : error ? "Tentar novamente" : "Enviar pergunta"}</button>
+      <button type="submit" className="button primary" disabled={busy || waiting || audioActive || !question.trim() || error?.code === "invalid_search_token" || error?.status === 404}><Send size={16} aria-hidden="true" />{busy ? "Consultando…" : error ? "Tentar novamente" : "Enviar pergunta"}</button>
       {busy && <button type="button" className="question-clear" onClick={() => chat.cancel()}>Cancelar envio</button>}
     </form>
+    <AssistantAudio key={`${state.selectedId}:${chat.conversationVersion}`} active={active} disabled={busy || waiting || (pathname.startsWith("/imovel/") && !chat.pageListingId) || error?.code === "invalid_search_token" || error?.status === 404} onActiveChange={setAudioActive} onSend={file => chat.send(file, { page: pathname === "/" ? "home" : chat.pageListingId ? "listing" : "other" })} />
     <p role="status" aria-live="polite" aria-atomic="true" className="question-status">{chat.status}</p>
     {error && <div className="question-error"><p>{error.message}</p>
       {error.code === "invalid_search_token" && <><p>Ao iniciar uma nova busca, as preferências e as opções já mostradas serão reiniciadas. Nenhuma mensagem será reenviada automaticamente.</p><button type="button" className="button secondary" onClick={chat.restartSearch}>Iniciar nova busca</button></>}

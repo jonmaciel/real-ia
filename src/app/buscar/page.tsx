@@ -38,7 +38,7 @@ export default async function Results({ searchParams }: { searchParams: Promise<
   const queryKey = exact ? assistantSearchParams(query).toString() : `legacy:${serialize(filters)}`;
   const href = (page: number) => `/buscar?${exact ? assistantSearchParams({ ...query, page }) : serialize({ ...filters, page })}`;
   const labels: Record<string, string> = { city: "Cidade", neighborhood: "Bairro", region: "Estado", country: "País", listing_type: "Modalidade", currency: "Moeda", min_price: "Preço mínimo", max_price: "Preço máximo", q: "Título", availability: "Disponibilidade" };
-  const active = Object.entries(filters).filter(([key, value]) => !["page", "per_page", "sort"].includes(key) && value !== undefined && value !== "");
+  const active = Object.entries(filters).filter(([key, value]) => !["page", "per_page", "sort"].includes(key) && value !== undefined && value !== "" && !(key === "currency" && value === "BRL"));
   const appliedQuery = result && "applied_filters" in result.meta ? { ...query, filters: result.meta.applied_filters } : query;
   return <section className="section results">
     <nav className="breadcrumb"><Link href="/">Início</Link><span>/</span>Explorar imóveis</nav>

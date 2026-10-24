@@ -142,3 +142,16 @@
  .search-ai-composer textarea { min-height: 96px; font-size: 16px; }
  .search-ai-restart { padding: 4px; font-size: 11px; }
 }
+
+.assistant-audio { margin-top: 8px; }
+.assistant-audio-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.assistant-audio-actions > button:not(.primary) { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+.assistant-audio-actions > button:not(.primary):hover { background: #f4f5f6; }
+.assistant-audio button:disabled { opacity: .55; cursor: default; }
+.assistant-audio-actions small { font-size: 11px; color: var(--muted); }
+.assistant-audio-preview { padding: 12px; background: #f6f7f8; border: 1px solid var(--border); border-radius: 10px; }
+.assistant-audio-preview p, .audio-transcription { margin: 4px 0 10px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.assistant-audio-preview audio { display: block; width: 100%; max-width: 440px; height: 44px; margin-bottom: 8px; }
+.audio-transcription { margin-top: 12px; padding: 10px 12px; background: #f6f7f8; border-radius: 8px; white-space: pre-wrap; }
+.assistant-audio-error { color: #a32b23; font-size: 12px; line-height: 1.6; }
+.chat-window .assistant-audio { flex-shrink: 0; }

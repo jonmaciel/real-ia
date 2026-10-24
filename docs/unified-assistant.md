@@ -5,6 +5,10 @@ somente uma lista de imóveis, atualizada a cada prompt. Filtros convencionais
 ficam na opção “Usar filtros”. A janela flutuante continua nas outras páginas
 públicas, com o mesmo estado de conversa, sem duplicar a busca nesta rota.
 
+Gravação e anexos usam o mesmo estado e respostas. Ver
+[assistant-audio.md](assistant-audio.md) para multipart, HMAC, limites e timeout
+de 95 segundos do envio de áudio. O fluxo de texto abaixo permanece disponível.
+
 ## Lista única e continuidade
 
 `AssistantProvider` mantém histórico, token opaco, seleção, filtros e rascunho em
@@ -35,7 +39,11 @@ Só o total retornado pelo endpoint exato é mostrado como contagem global. Um
 A lista considera apenas exclusões explícitas, nunca todos os IDs vistos no chat.
 
 O formulário manual permanece montado, mas oculto inicialmente. Ao selecioná-lo,
-mostra os campos atuais. Após busca por IA ele preserva os filtros avançados em
+mostra os campos atuais. “Buscar imóveis” usa navegação interna, sem recarregar o
+documento: mantém a aba, o formulário, a conversa e a rolagem, com carregamento
+somente nos resultados. A URL recebe os critérios e página 1; voltar/avançar
+restauram os filtros. Repetir a mesma busca reconsulta a rota sem recarga completa.
+Após busca por IA ele preserva os filtros avançados em
 campos ocultos e continua usando o endpoint exato; não perde tipo, mobília,
 comodidades, base de preço nem exclusões ao editar um limite de orçamento.
 O orçamento total mensal é rotulado corretamente. Busca manual independente

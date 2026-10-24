@@ -2,6 +2,9 @@
 
 Frontend independente da ListingsPlatform, em português brasileiro. Next.js App Router, React, TypeScript estrito, Zod e CSS com tokens. O diretório estava vazio; nenhum código do backend foi alterado. Os ícones usam Lucide (ISC). DM Sans e Manrope são servidas localmente via Fontsource (OFL), sem requisições ao Google Fonts. A imagem de ambientação da abertura é gerada por IA e identificada como ilustrativa; nenhum card usa fotografia fictícia.
 
+Integrações posteriores do assistente: [busca e perguntas](docs/unified-assistant.md)
+e [gravação/anexo de áudio](docs/assistant-audio.md), com contratos, BFF e verificações.
+
 ## Executar
 
 Node.js 22.13+ ou 24 e npm. As versões resolvidas estão no package-lock.json.

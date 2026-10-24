@@ -115,7 +115,9 @@ test("perfil aceita somente nome", () => {
 });
 test("recursos futuros permanecem desativados", async () => {
   const { flags } = await import("../src/lib/presentation");
-  assert.ok(Object.values(flags).every((v) => v === false));
+  const { voiceSearch, ...future } = flags;
+  assert.equal(voiceSearch, true);
+  assert.ok(Object.values(future).every((v) => v === false));
 });
 test("senha conta caracteres Unicode, não unidades UTF-16", () => {
   assert.equal(

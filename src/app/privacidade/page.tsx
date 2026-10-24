@@ -9,10 +9,24 @@ export default function Privacy() {
       <h1>Privacidade com clareza.</h1>
       <h2>Navegação pública</h2>
       <p>
-        Você pode consultar imóveis sem criar uma conta. Analytics, gravação de
-        áudio e histórico comportamental estão desativados. As buscas aparecem
+        Você pode consultar imóveis sem criar uma conta. Analytics e histórico
+        comportamental estão desativados. Os filtros de busca aparecem
         na URL para permitir compartilhamento; evite incluir informações
         pessoais.
+      </p>
+      <h2>Conversa e áudio</h2>
+      <p>
+        Mensagens e áudios são enviados ao assistente somente quando você escolhe
+        enviá-los. A gravação pede acesso ao microfone após seu clique e pode ser
+        parada ou cancelada. Você pode ouvir e descartar o áudio antes de enviar.
+        O áudio enviado é processado pela API da plataforma e pelo provedor de IA
+        para transcrição e resposta. Evite compartilhar dados pessoais ou sensíveis.
+        A Morada não cria um link público nem salva a gravação no banco de dados.
+      </p>
+      <p>
+        A conversa e a transcrição ficam na memória desta visita e podem acompanhar
+        sua navegação entre imóveis. “Limpar conversa” remove esse histórico local.
+        Cancelar um envio não garante que o processamento no servidor seja interrompido.
       </p>
       <h2>Sua conta</h2>
       <p>

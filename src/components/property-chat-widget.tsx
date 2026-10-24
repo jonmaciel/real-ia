@@ -50,7 +50,7 @@ export function PropertyChatWidget() {
         <button type="button" onClick={minimize} aria-label="Minimizar conversa"><Minus size={22} aria-hidden="true" /></button>
       </header>
       <div className="chat-window-content">
-        <PropertyQuestions />
+        <PropertyQuestions active={open} />
       </div>
     </section>
     <button ref={launcher} type="button" className="chat-launcher" onClick={open ? minimize : show} aria-expanded={open} aria-controls="morada-chat-window" aria-label={open ? "Minimizar conversa" : "Abrir conversa com o Morada"}><MessageCircle size={24} aria-hidden="true" /><span>Fale com o Morada</span></button>

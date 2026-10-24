@@ -28,13 +28,17 @@ export const assistantContextSchema = z.object({
   page: z.enum(["home", "search", "listing", "other"]), current_filters: assistantFiltersSchema.strict().optional(),
 }).strict();
 export type AssistantPageContext = z.infer<typeof assistantContextSchema>;
-export const assistantInputSchema = z.object({
-  question: z.string().trim().min(1).max(2000).refine(v => !v.includes("\u0000")),
+const metadataFields = {
   history: z.array(historyMessageSchema).max(6).default([]),
   selected_listing_id: assistantIdSchema.nullish().transform(v => v ?? null),
   search_token: token.nullish().transform(v => v ?? null),
   context: assistantContextSchema.optional(),
-}).strict().refine(v => v.history.reduce((sum, m) => sum + m.content.length, 0) <= 8000);
+};
+const boundedMetadata = (v: { history: { content: string }[] }) => v.history.reduce((sum, m) => sum + m.content.length, 0) <= 8000;
+export const assistantMetadataSchema = z.object(metadataFields).strict().refine(boundedMetadata);
+export const assistantInputSchema = z.object({
+  ...metadataFields, question: z.string().trim().min(1).max(2000).refine(v => !v.includes("\u0000")),
+}).strict().refine(boundedMetadata);
 const citation = z.object({ id: z.string(), title: z.string(), url: z.string(), kind: z.enum(["listing", "web"]), start_index: z.number().int().optional(), end_index: z.number().int().optional() });
 export const assistantResponseSchema = z.object({ data: z.object({
   mode: z.enum(["search", "property"]), action: z.enum(["recommendations", "clarify", "no_results", "answer", "traditional_search"]),
@@ -45,7 +49,10 @@ export const assistantResponseSchema = z.object({ data: z.object({
   excluded_ids: z.array(assistantIdSchema).max(300).optional(),
   filter_proposal: z.object({ filters: assistantFiltersSchema, excluded_ids: z.array(assistantIdSchema).max(300) }).nullish(),
   ui_action: z.object({ type: z.literal("switch_search_tab"), tab: z.literal("traditional"), requires_confirmation: z.literal(false) }).strict().nullish(),
+  input_type: z.enum(["audio", "text"]).optional(),
+  transcription: z.object({ text: z.string().min(1).max(2000).refine(v => v.trim().length > 0 && !v.includes("\u0000") && new TextEncoder().encode(v).length <= 12000), model: z.string().max(200) }).optional(),
 }).refine(v => v.action === "recommendations" ? v.recommendations.length > 0 : v.recommendations.length === 0).refine(v => v.mode === "search" ? v.selected_listing_id === null && v.action !== "answer" : v.selected_listing_id !== null && v.action === "answer" && !v.recommendations.length) });
+export const assistantAudioResponseSchema = assistantResponseSchema.refine(v => v.data.input_type === "audio" && !!v.data.transcription);
 export type AssistantResponse = z.infer<typeof assistantResponseSchema>["data"];
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export type AssistantFilters = z.infer<typeof assistantFiltersSchema>;

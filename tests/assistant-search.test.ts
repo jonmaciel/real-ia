@@ -12,7 +12,7 @@ test("pills preservam false, zero e requisitos distintos de preferências", () =
   assert.ok(pills.some(pill => pill.label === "Requisito: Aceita pets" && pill.value === "pet_friendly"));
   assert.ok(pills.some(pill => pill.label === "Preferência: Academia" && pill.value === "gym"));
   assert.equal(pills.find(pill => pill.key === "price_basis")?.removable, false);
-  assert.equal(pills.find(pill => pill.key === "currency")?.removable, false);
+  assert.equal(pills.some(pill => pill.key === "currency"), false);
 });
 test("remover pill reseta paginação e preserva orçamento, demais critérios e exclusões", () => {
   const query: AssistantSearch = { filters: { city: "Araucária", furnished: false, bedrooms: 0, max_price: "3000.00", price_basis: "total_monthly", amenities: ["balcony", "pet_friendly"], preferred_amenities: ["gym", "pet_friendly"] }, excludedIds: ["2"], page: 3, perPage: 20 };

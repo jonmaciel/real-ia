@@ -184,3 +184,66 @@ test("sem exclusões autoritativas não aplica uma busca incompleta", async ({ p
   await expect(page.locator(".property-card")).toHaveCount(0);
   await expect(page).not.toHaveURL(/assistant=1/);
 });
+
+test("buscar pelos filtros atualiza só os resultados, mantém formulário, URL, histórico e rascunho", async ({ page }) => {
+  await page.goto("/buscar?page=2&per_page=1");
+  await page.getByLabel("O que você procura?").fill("rascunho da conversa");
+  const manual = page.getByRole("tab", { name: "Usar filtros", exact: true });
+  await manual.click();
+  const form = page.locator(".full-search");
+  await form.evaluate(element => element.setAttribute("data-instance", "preserved"));
+  await page.getByPlaceholder("Digite a cidade").fill("Curitiba");
+  await page.getByRole("radio", { name: "Alugar", exact: true }).check();
+  let documents = 0; let aiCalls = 0; let resultRequests = 0;
+  page.on("request", request => {
+    if (request.isNavigationRequest() && request.resourceType() === "document") documents++;
+    if (request.url().includes("/api/assistente/mensagens")) aiCalls++;
+  });
+  let release!: () => void;
+  const delayed = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/buscar?**", async route => {
+    if (route.request().headers().rsc === "1" && new URL(route.request().url()).searchParams.get("city") === "Curitiba") {
+      resultRequests++; await delayed;
+    }
+    await route.continue();
+  });
+  try {
+    await page.getByRole("button", { name: "Buscar imóveis", exact: true }).click();
+    await expect.poll(() => resultRequests).toBe(1);
+    await expect(page.locator(".main-search-results")).toHaveAttribute("aria-busy", "true");
+    await expect(page.locator(".search-results-loading")).toBeVisible();
+    await expect(form).toBeVisible(); await expect(form).toHaveAttribute("data-instance", "preserved");
+    await expect(manual).toHaveAttribute("aria-selected", "true");
+    const scroll = await page.evaluate(() => scrollY);
+    release();
+    await expect(page.locator(".main-search-results")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".property-card")).toContainText("Apartamento com varanda no Batel");
+    await expect(form).toHaveAttribute("data-instance", "preserved");
+    await expect(manual).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByPlaceholder("Digite a cidade")).toHaveValue("Curitiba");
+    await expect(page.getByLabel("O que você procura?")).toHaveValue("rascunho da conversa");
+    expect(Math.abs(await page.evaluate(() => scrollY) - scroll)).toBeLessThan(3);
+    const params = new URL(page.url()).searchParams;
+    expect(params.get("page")).toBe("1"); expect(params.get("listing_type")).toBe("rental"); expect(params.get("per_page")).toBe("1");
+    await page.goBack(); await expect(page).toHaveURL(/page=2/);
+    await expect(page.getByPlaceholder("Digite a cidade")).toHaveValue("");
+    await expect(manual).toHaveAttribute("aria-selected", "true");
+    await page.goForward(); await expect(page.getByPlaceholder("Digite a cidade")).toHaveValue("Curitiba");
+    expect(documents).toBe(0); expect(aiCalls).toBe(0);
+  } finally { release(); }
+});
+
+test("falha na busca manual preserva filtros e permite corrigir sem recarregar o documento", async ({ page }) => {
+  await page.goto("/buscar"); await page.getByRole("tab", { name: "Usar filtros", exact: true }).click();
+  let documents = 0;
+  page.on("request", request => { if (request.isNavigationRequest() && request.resourceType() === "document") documents++; });
+  const form = page.locator(".full-search"); await form.evaluate(element => element.setAttribute("data-instance", "preserved"));
+  const city = page.getByPlaceholder("Digite a cidade");
+  await city.fill("Erro503"); await page.getByRole("button", { name: "Buscar imóveis", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Vamos tentar de novo?" })).toBeVisible();
+  await expect(city).toHaveValue("Erro503"); await expect(form).toBeVisible();
+  await expect(form).toHaveAttribute("data-instance", "preserved");
+  await city.fill("Curitiba"); await page.getByRole("button", { name: "Buscar imóveis", exact: true }).click();
+  await expect(page.locator(".property-card")).not.toHaveCount(0);
+  await expect(form).toHaveAttribute("data-instance", "preserved"); expect(documents).toBe(0);
+});

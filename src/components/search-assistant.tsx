@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp, SlidersHorizontal, Sparkles } from "lucide-react";
 import { assistantSearchParams, exactFiltersSchema, type AssistantSearch } from "@/lib/assistant-search";
 import type { AssistantFilters } from "@/lib/assistant-contracts";
 import { useAssistant } from "./assistant-provider";
+import { AssistantAudio } from "./assistant-audio";
 
 export function SearchAssistant({ manualForm, children, query, queryKey, resultError }: {
   manualForm: ReactNode; children: ReactNode; query: AssistantSearch; queryKey: string; resultError?: string;
@@ -13,6 +14,7 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
   const { continueSearch, subscribeSearch } = chat;
   const router = useRouter();
   const [manual, setManual] = useState(false);
+  const [audioActive, setAudioActive] = useState(false);
   const [pending, startTransition] = useTransition();
   const [updateError, setUpdateError] = useState(false);
   const [expectedKey, setExpectedKey] = useState<string | null>(null);
@@ -36,14 +38,14 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
   }), [subscribeSearch, query.perPage, router]);
   const updating = chat.busy || pending;
   const updated = expectedKey === queryKey && !resultError && !updateError;
-  const message = chat.busy ? "Pensando…"
+  const message = chat.busy ? chat.sendingAudio ? "Transcrevendo e pensando…" : "Pensando…"
     : pending ? "Atualizando imóveis…"
     : chat.error ? chat.error.message
     : updateError || (expectedKey === queryKey && resultError) ? "Não foi possível atualizar a lista. Tente novamente em instantes."
     : updated ? last?.action === "clarify" ? `Lista atualizada. ${last.answer}` : "Lista atualizada."
     : "";
-  function send() {
-    if (updating) return;
+  function send(audio?: File): Promise<boolean> {
+    if (updating || (!audio && audioActive)) return Promise.resolve(false);
     setUpdateError(false);
     try {
     // Hydrate only when the accepted URL differs from the conversation snapshot.
@@ -52,13 +54,28 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
     try { previous = assistantSearchParams({ filters: chat.state.filters, excludedIds: [], page: 1, perPage: query.perPage }, false).toString(); } catch { /* Invalid snapshots are never submitted. */ }
     const snapshot: AssistantFilters = exactFiltersSchema.parse(query.filters);
     for (const key of ["min_price", "max_price", "min_area", "max_area"] as const) if (snapshot[key] != null) snapshot[key] = Number(snapshot[key]);
-    void chat.send(chat.question, { page: "search", ...(current !== previous ? { current_filters: snapshot } : {}) });
-    } catch { setUpdateError(true); }
+    return chat.send(audio ?? chat.question, { page: "search", ...(current !== previous ? { current_filters: snapshot } : {}) });
+    } catch { setUpdateError(true); return Promise.resolve(false); }
   }
   function restart() {
     chat.restartSearch(); setExpectedKey(null); setUpdateError(false);
     startTransition(() => router.replace("/buscar", { scroll: false }));
     input.current?.focus();
+  }
+  function submitFilters(event: FormEvent<HTMLDivElement>) {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    event.preventDefault();
+    if (updating) return;
+    const params = new URLSearchParams();
+    for (const [key, value] of new FormData(form)) if (typeof value === "string" && value !== "") params.append(key, value);
+    params.set("page", "1");
+    const href = `/buscar?${params}`;
+    setUpdateError(false); setExpectedKey(null);
+    startTransition(() => {
+      if (href === window.location.pathname + window.location.search) router.refresh();
+      else router.push(href, { scroll: false });
+    });
   }
   return <div className="search-experience" data-manual={manual}>
     <section className="search-assistant" aria-label="Busca de imóveis">
@@ -76,24 +93,26 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
         {!manual && chat.state.turns.length > 0 && <button className="search-ai-restart" type="button" onClick={restart}>Nova busca</button>}
       </div>
       <div role="tabpanel" id={`${id}-panel-0`} aria-labelledby={`${id}-tab-0`} hidden={manual} className="search-ai-panel">
-        <form className="search-ai-composer" onSubmit={event => { event.preventDefault(); send(); }}>
+        <form className="search-ai-composer" onSubmit={event => { event.preventDefault(); void send(); }}>
           <label htmlFor={`${id}-question`} className="sr-only">O que você procura?</label>
-          <textarea id={`${id}-question`} ref={input} rows={2} maxLength={2000} value={chat.question} disabled={updating}
+          <textarea id={`${id}-question`} ref={input} rows={2} maxLength={2000} value={chat.question} disabled={updating || audioActive}
             placeholder="Ex.: uma casa em Araucária, para alugar até R$ 3.000. Você pode completar aos poucos."
             onChange={event => chat.setQuestion(event.target.value)} onKeyDown={event => {
-              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); }
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); }
             }} aria-describedby={`${id}-help`} />
           <button className="button primary" type="submit" aria-label={chat.error ? "Tentar novamente" : "Enviar busca"} title="Enviar busca"
-            disabled={updating || chat.waiting || !chat.question.trim() || chat.error?.code === "invalid_search_token" || chat.error?.status === 404}>
+            disabled={updating || audioActive || chat.waiting || !chat.question.trim() || chat.error?.code === "invalid_search_token" || chat.error?.status === 404}>
             <ArrowUp size={20} aria-hidden="true" />
           </button>
           <span id={`${id}-help`} className="sr-only">Descreva o imóvel, a cidade e o orçamento. Enter envia; Shift mais Enter quebra linha. Até 2.000 caracteres. A IA pode errar.</span>
         </form>
+        <AssistantAudio key={`${chat.state.selectedId}:${chat.conversationVersion}`} active={!manual} disabled={updating || chat.waiting || chat.error?.code === "invalid_search_token" || chat.error?.status === 404} onActiveChange={setAudioActive} onSend={file => send(file)} />
+        {last?.input_type === "audio" && last.transcription && <p className="audio-transcription"><strong>Transcrição:</strong> {last.transcription.text}</p>}
         <p className="search-ai-status" role="status" aria-live="polite" aria-atomic="true">{message}{chat.waiting && ` Tente novamente em ${chat.secondsLeft} s.`}</p>
         {chat.busy && <button type="button" className="search-ai-restart" onClick={() => chat.cancel()}>Cancelar envio</button>}
         {(chat.error?.code === "invalid_search_token" || chat.error?.status === 404) && <button type="button" className="search-ai-restart" onClick={restart}>Iniciar nova busca</button>}
       </div>
-      <div role="tabpanel" id={`${id}-panel-1`} aria-labelledby={`${id}-tab-1`} hidden={!manual} inert={updating}>
+      <div role="tabpanel" id={`${id}-panel-1`} aria-labelledby={`${id}-tab-1`} hidden={!manual} inert={updating} onSubmitCapture={submitFilters}>
         {manualForm}
       </div>
     </section>

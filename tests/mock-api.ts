@@ -1,6 +1,8 @@
 // Contrato isolado. Nunca importado pela aplicação de produção.
 import { assistantResponse, recommendation } from "./assistant-fixtures";
 import { assistantInputSchema } from "../src/lib/assistant-contracts";
+import { assistantMetadataSchema } from "../src/lib/assistant-contracts";
+import { createHash } from "node:crypto";
 import { parseAssistantSearch } from "../src/lib/assistant-search";
 import { assistantCatalog } from "./assistant-search-fixtures";
 import { createServer } from "node:http";
@@ -9,6 +11,7 @@ const sessions = new Set<string>();
 let counter = 0;
 let assistantCounter = 0;
 const assistantSessions = new Map<string, { seen: number[]; filters: Record<string, unknown> }>();
+let audioObservation: Record<string, unknown> | null = null;
 const adminTokens = new Set<string>();
 const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
   id,
@@ -88,9 +91,33 @@ createServer(async (req, res) => {
     res.statusCode = status;
     res.end(data === undefined ? "" : JSON.stringify(data));
   };
-  let text = "";
-  for await (const chunk of req) text += chunk;
-  const b = text ? JSON.parse(text) : {};
+  const rawChunks: Buffer[] = [];
+  for await (const chunk of req) rawChunks.push(Buffer.from(chunk));
+  const rawBody = Buffer.concat(rawChunks);
+  if (path === "/__audio-observation") return send(200, audioObservation);
+  if (path === "/assistant/audio-messages") {
+    try {
+      const contentType = req.headers["content-type"] ?? "";
+      const form = await new Request("http://localhost", { method: "POST", headers: { "Content-Type": contentType }, body: rawBody }).formData();
+      const audio = form.get("audio");
+      const metadata = assistantMetadataSchema.parse(JSON.parse(String(form.get("metadata") ?? "{}")));
+      if (!(audio instanceof File)) return send(422, { error: { code: "invalid_audio" } });
+      audioObservation = { sha256: createHash("sha256").update(rawBody).digest("hex"), contentType, audioSha256: createHash("sha256").update(new Uint8Array(await audio.arrayBuffer())).digest("hex"), fileSize: audio.size, metadata, fields: Array.from(form.keys()) };
+      const status = /^erro-(\d+)/.exec(audio.name)?.[1];
+      if (status) { if (status === "429") res.setHeader("Retry-After", "2"); return send(Number(status), { error: { code: status === "413" ? "audio_too_large" : status === "415" ? "unsupported_audio_type" : "ai_unavailable" }, provider_debug: "PRIVATE_PROVIDER_DETAIL" }); }
+      const code = /^code-(.+)\.wav$/.exec(audio.name)?.[1];
+      if (code) return send(422, { error: { code } });
+      const property = metadata.selected_listing_id !== null;
+      const result = assistantResponse({
+        mode: property ? "property" : "search", action: property ? "answer" : "clarify", selected_listing_id: metadata.selected_listing_id,
+        answer: property ? "Consulte os valores e taxas com o anunciante." : "Qual bairro você prefere?",
+        applied_filters: { currency: "BRL", city: "Araucária", property_type: "house", listing_type: "rental", price_basis: "base", sort: "recommended" },
+        input_type: "audio", transcription: { text: property ? "Quais taxas estão incluídas?" : "uma casa em Araucária para alugar", model: "contract-transcriber" },
+      });
+      return send(200, { data: audio.name === "bad-response.wav" ? { ...result, transcription: undefined } : result });
+    } catch { return send(400, { error: { code: "invalid_request" } }); }
+  }
+  const b = rawBody.length ? JSON.parse(rawBody.toString("utf8")) : {};
   const token = req.headers.authorization?.replace("Bearer ", "");
   if (path === "/assistant/results") {
     try {

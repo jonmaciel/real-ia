@@ -2,7 +2,7 @@ import { locale } from "./locale";
 import type { Listing, Category } from "./contracts";
 export const flags = {
   aiSearch: false,
-  voiceSearch: false,
+  voiceSearch: true,
   accountFavorites: false,
   savedSearches: false,
   notifications: false,
