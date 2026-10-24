@@ -40,3 +40,19 @@ test("consulta Overpass restringe categorias raio e resultado sem inventar proxi
   assert.equal(places[0].url, "https://www.openstreetmap.org/way/2");
   assert.throws(() => parseNearby({ ...data, remark: "Query timed out" }, origin, "bakery", 500));
 });
+
+test("essenciais consultam quatro categorias em uma chamada e equilibram os locais retornados", () => {
+  const point = { lat: -25.43, lng: -49.27 };
+  const query = nearbyQuery(point, "essentials", 500);
+  for (const selector of ['["shop"="bakery"]', '["amenity"="pharmacy"]', '["highway"="bus_stop"]', 'supermarket|convenience']) assert.ok(query.includes(selector));
+  const data = { elements: [
+    ...Array.from({ length: 8 }, (_, index) => ({ type: "node", id: index + 1, lat: -25.4301, lon: -49.27, tags: { shop: "bakery", name: "Padaria" } })),
+    { type: "node", id: 20, lat: -25.432, lon: -49.27, tags: { amenity: "pharmacy", name: "Farmácia" } },
+    { type: "node", id: 21, lat: -25.432, lon: -49.27, tags: { shop: "convenience", name: "Mercado" } },
+    { type: "node", id: 22, lat: -25.432, lon: -49.27, tags: { highway: "bus_stop", name: "Ônibus" } },
+    { type: "node", id: 23, lat: -25.432, lon: -49.27, tags: { name: "Sem categoria confirmada" } },
+  ] };
+  const places = parseNearby(data, point, "essentials", 500);
+  assert.equal(places.length, 6); assert.equal(places.filter(place => place.category === "bakery").length, 3);
+  assert.deepEqual(new Set(places.map(place => place.category)), new Set(["bakery", "pharmacy", "supermarket", "bus"]));
+});

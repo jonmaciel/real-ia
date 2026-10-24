@@ -44,15 +44,22 @@ export default function Privacy() {
       </p>
       <h2>Mapas e arredores</h2>
       <p>
-        O mapa é carregado somente após sua ação e utiliza OpenStreetMap. Ao
-        explorar arredores, seu navegador consulta o serviço Overpass (Private.coffee por padrão) com as
-        coordenadas já publicadas do imóvel, categoria e raio selecionados.
+        Quando há coordenadas públicas, o mapa é carregado automaticamente com
+        uma consulta inicial dos serviços essenciais próximos. Na configuração
+        gratuita, seu navegador se comunica com OpenStreetMap e com o serviço
+        Overpass (Private.coffee por padrão), enviando somente as coordenadas já
+        publicadas do imóvel, categoria e raio. Se o operador ativar Google Maps,
+        o mapa e os locais próximos serão fornecidos pelo Google Maps Platform.
+        Alterar a categoria ou o raio inicia uma consulta ao provedor configurado.
         Esses serviços recebem dados técnicos da conexão, como IP. Não usamos
         sua geolocalização. Links de rota e localização abrem o Google Maps
-        apenas quando você escolhe acessá-los.
+        apenas quando você escolhe acessá-los na configuração gratuita.
       </p>
       <p>
-        Consulte as <a className="text-link" href="https://overpass.private.coffee/#privacy-policy" target="_blank" rel="noopener noreferrer">políticas do serviço de arredores</a> e do <a className="text-link" href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>.
+        Consulte as <a className="text-link" href="https://overpass.private.coffee/#privacy-policy" target="_blank" rel="noopener noreferrer">políticas do serviço de arredores</a>, do <a className="text-link" href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> e do <a className="text-link" href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google</a>.
+      </p>
+      <p>
+        Quando ativado, o uso do Google Maps também está sujeito aos <a className="text-link" href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Termos de Serviço do Google</a> e aos <a className="text-link" href="https://www.google.com/help/terms_maps/" target="_blank" rel="noopener noreferrer">Termos Adicionais do Google Maps</a>.
       </p>
       <h2>Antes do lançamento público</h2>
       <p>

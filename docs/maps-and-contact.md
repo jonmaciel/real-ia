@@ -1,52 +1,168 @@
 # Contatos, localização e arredores
 
-## Integração gratuita
+## Mapa aberto e provedores
 
-Leaflet 1.9.4 (BSD-2-Clause) é carregado dinamicamente após ação do visitante. O mapa usa os tiles de `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, diretamente pelo navegador, com atribuição visível, Referer normal e cache HTTP do navegador. Sem proxy, prefetch, download em massa, geolocalização do usuário ou Google Maps Platform. Não precisa de cartão, conta Google ou API key.
+O mapa abre automaticamente quando há coordenadas públicas. Seu contêiner fica
+visível desde a primeira renderização, com altura reservada, posição relativa e
+camadas contidas. ResizeObserver corrige dimensões ao mudar o layout; o SDK só é
+inicializado depois de o contêiner existir. Sem coordenadas, há localização textual
+em vez de mapa ou geocodificação inferida. Nenhum endereço privado é reconstruído.
+O ponto do anunciante pode ser aproximado; trocar o provedor não corrige dados
+incorretos na origem. A posição deve ser confirmada antes de visitar.
 
-O mapa não recebe o endereço particular nem tenta reconstruí-lo. Usa exclusivamente latitude/longitude publicadas pela API do Morada; valores ausentes, vazios ou fora dos limites não viram zero. Ponto aproximado é identificado como tal. Sem coordenadas, mostramos a localização textual e orientação para consultar o anunciante, sem geocodificar bairro ou endereço.
+`NEXT_PUBLIC_MAPS_PROVIDER=openstreetmap` é o padrão e permanece ativo nesta
+entrega. Leaflet 1.9.4 usa tiles oficiais HTTPS do OpenStreetMap, com atribuição,
+Referer e cache normais. Sem proxy aberto, download em massa ou geolocalização do
+visitante. Google Maps tem adaptador separado, carregado **somente** quando o
+operador configura `google`; não há chamadas Google pagas no modo gratuito.
+Falhas não trocam de provedor silenciosamente nem usam locais fictícios.
 
-Os links externos de localização e rota a pé abrem o site Google Maps por ação explícita. Eles não são chamadas a APIs pagas e não calculamos tempo de caminhada.
+## Serviços úteis para a decisão
 
-## Arredores no mesmo mapa
+A visão inicial “Essenciais” faz uma consulta com padarias, farmácias, mercados
+(incluindo lojas de conveniência) e pontos de ônibus. Mostra até três registros
+retornados de cada categoria, ordenados por distância. Botões permitem consultar
+uma categoria específica (até 12 resultados), inclusive lojas, em raio de 500 m
+ou 1 km. Não é inventário completo dos arredores nem garantia de horários,
+funcionamento, segurança da região ou acessibilidade.
 
-O navegador consulta Overpass via POST, sem cookies, apenas quando o visitante solicita. Endpoint padrão: `https://overpass.private.coffee/api/interpreter`. O operador declara suporte a projetos comerciais sem cadastro. Variável opcional `NEXT_PUBLIC_OVERPASS_API_URL` permite selecionar uma instância HTTPS própria/compatível; como qualquer variável pública do Next.js, requer novo build para alterar no Vercel.
+Marcadores numerados têm cores por categoria e correspondem aos cartões com
+ícone, nome, categoria e distância. Selecionar marcador/cartão destaca ambos e
+liga o ponto ao imóvel. “Centralizar no imóvel” restaura a visão. Há lista textual
+alternativa e links externos de rota; não se calculam trajetos ou tempos de viagem.
 
-- Categorias fixas: padarias, lojas, pontos de ônibus (`highway=bus_stop`), supermercados e farmácias.
-- Raios fixos de 500 m e 1 km, timeout Overpass de 15 s e cancelamento do navegador em 20 s.
-- Uma consulta em andamento por componente, intervalo mínimo de 5 s entre consultas não armazenadas e cache apenas na memória da página por categoria/raio. Sem polling, retry automático ou failover automático entre provedores.
-- A consulta retorna no máximo 60 elementos OSM. O frontend valida a resposta, descarta posições inválidas/fora do raio, ordena os retornados por distância e mostra até 12. Não afirma que representam todos os locais ou os 12 mais próximos de todo o catálogo.
-- Nós usam sua posição; vias/relações usam o centro retornado. O centro pode não coincidir com a entrada do estabelecimento. Cadastros podem estar ausentes ou desatualizados.
-- Distância geodésica aproximada (Haversine), sempre indicada como **linha reta a partir do ponto publicado**. A linha desenhada ao selecionar um marcador não é uma rota nem representa ruas transitáveis.
-- Lista acessível alternativa, seleção por marcador/lista, nomes tratados como texto (inclusive no tooltip), links por identificadores OSM validados e créditos ODbL.
-- A busca de arredores não altera os filtros de anúncios e não habilita `geoSearch` (busca geográfica do catálogo).
+Distância é geodésica aproximada (Haversine), em **linha reta a partir do ponto
+publicado**. Centros de vias/relações OSM não são necessariamente a entrada do
+local. Uma linha entre marcadores não é uma rota a pé. Os nomes externos são
+tratados como texto, incluindo tooltips e atribuições; URLs passam por whitelist
+de protocolo HTTPS sem credenciais. A busca não altera filtros do catálogo nem
+ativa `geoSearch`.
+
+### Provedor gratuito
+
+Overpass recebe uma consulta inicial automática e novas consultas por ação do
+visitante, sem cookies. Endpoint padrão: `https://overpass.private.coffee/api/interpreter`.
+A instância declara suporte comercial sem cadastro, sem SLA. Pode ser substituída
+por uma instância HTTPS própria via `NEXT_PUBLIC_OVERPASS_API_URL` e novo build.
+
+Uma consulta por vez; sem polling, retries ou failover automáticos. Respostas
+ficam só na memória da página por categoria/raio; “Atualizar arredores” faz nova
+consulta explícita. Overpass tem timeout de 15 s, navegador 20 s, cancelamento ao
+sair/trocar o imóvel e descarte de respostas antigas. União de essenciais limita
+a resposta a 80 elementos; categoria individual a 60; o schema aceita até 100.
+Posições inválidas/fora do raio e respostas parciais são rejeitadas. A cobertura
+pode ser incompleta mesmo quando a consulta retorna zero.
+
+### Preparar e ativar Google Maps
+
+O usuário informou que ainda não possui projeto/chave Google Cloud. A integração
+está preparada e testada por contrato; **não está ativada nem validada com uma
+chave real**. Para ativar, no projeto Google Cloud do operador:
+
+1. Associar faturamento e habilitar **Maps JavaScript API** e **Places API (New)**.
+2. Criar chave de navegador, restringindo aplicações por HTTP referrers a
+   `https://real-ia.vercel.app/*` e ao domínio próprio, se houver. Usar chave de
+   desenvolvimento separada para `http://localhost:3001/*`; não liberar wildcard
+   de todos os domínios ou de todos os previews da Vercel.
+3. Restringir a chave somente às duas APIs acima. Criar um Map ID JavaScript
+   próprio para os marcadores avançados. Configurar quotas compatíveis com o
+   tráfego e alertas de orçamento; alertas não são um bloqueio automático de gastos.
+4. Na Vercel, definir para o ambiente correspondente e fazer novo deploy:
+
+```env
+NEXT_PUBLIC_MAPS_PROVIDER=google
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=CHAVE_DE_NAVEGADOR_RESTRITA
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=MAP_ID_DO_PROJETO
+```
+
+Essas duas identificações são públicas por definição no SDK de navegador. Nunca
+usar chave OpenAI, credencial de serviço ou chave de servidor nessas variáveis.
+A aplicação usa canal estável `quarterly`, idioma pt-BR e região BR; não usa
+APIs legadas de Places, geocodificação ou rotas. A única dependência adicional é
+`@types/google.maps` de desenvolvimento; o SDK não é carregado no provedor gratuito.
+
+O adaptador usa AdvancedMarkerElement e `Place.searchNearby`, com campos
+id/displayName/location/primaryType/googleMapsURI/attributions, máximo 20,
+ranking por distância e os tipos confirmados de cada categoria. Carregar o mapa
+pode gerar uso de Dynamic Maps; consultar arredores usa Places e pode gerar
+cobrança separada. Há uma consulta inicial por página com mapa e consultas apenas
+por ações posteriores, sem retries pagos automáticos. Atribuições Google/de
+terceiros permanecem visíveis; resultados Google só são exibidos no mapa Google.
+O SDK não permite cancelar uma consulta Places já aceita: o frontend interrompe
+a espera após 20 s, ignora respostas antigas e não promete cancelar a cobrança.
+O cache de consultas por categoria/raio é exclusivo do provedor OSM. Places
+mantém apenas a resposta em exibição; não há cache manual entre consultas nem
+armazenamento persistente. A página pública de privacidade inclui os links de
+termos/políticas Google; o operador deve completar seus próprios termos e dados
+de controlador antes de ativar o serviço em produção.
+
+Não é preciso alterar o backend, migrations, CORS ou serviços de IA. Sem chave/
+Map ID configurados, selecionar `google` mostra erro recuperável e link externo;
+não apresenta o mapa gratuito como se fosse Google Maps.
 
 ## Contatos e endereço
 
-Foi consultado o serializador público local do backend em `app/controllers/listings_platform/catalog_controller.rb` e a documentação de publicação. Não existem campos públicos próprios de telefone ou endereço completo; coordenadas só saem com `location_public`. A implementação não presume campos novos nem usa metadados administrativos ou dados privados.
+A apresentação de contato existente destaca somente linhas públicas explicitamente
+identificadas da descrição: `Endereço:` e telefone brasileiro associado a
+`Telefone`, `Tel`, `Fone`, `Contato` ou `WhatsApp`. Telefones com DDD/formato aceito
+geram links `tel:` normalizados. Não se extraem números de URLs ou de outros
+metadados administrativos; a descrição continua como texto React.
 
-Destacamos somente informações já publicadas em linhas explicitamente identificadas da descrição: `Endereço:` e telefone brasileiro associado a `Telefone`, `Tel`, `Fone`, `Contato` ou `WhatsApp`. Telefones com DDD e formato aceito geram links `tel:` normalizados; não são inferidos números de outros trechos, URLs WhatsApp ou contatos de sites terceiros. O texto e sua proveniência são mantidos como informação não verificada do anúncio. Descrições continuam como texto React, sem HTML externo.
+O backend local atual também serializa `address`. A adaptação desse objeto ainda
+não é feita por essa seção do frontend: não se deve confundir essa limitação de
+apresentação com ausência do campo no backend. Esta entrega preserva o contato
+existente e usa somente as coordenadas públicas para o mapa; não geocodifica o
+endereço, não reconstrói localização privada e não altera regras de divulgação.
 
-Endereços em outros formatos continuam visíveis na descrição, sem extração automática. Para cobertura completa, o backend precisa de campos públicos explícitos e autorizados para contato/endereço, com proveniência e regras de divulgação. Não foram alterados backend ou regras de privacidade.
+## Operação e verificação
 
-## Operação e dependências
+Com o provedor gratuito, nenhuma variável nova é obrigatória. Na Vercel, manter
+os ambientes existentes; o padrão já é `openstreetmap`. A implantação usa
+`npm ci`, build e deploy normais. A página de privacidade descreve o carregamento
+automático e os provedores. CSP futura precisa permitir tiles OSM em img-src e
+Overpass em connect-src; Google exige seus hosts oficiais de scripts, mapas e
+Places conforme sua documentação de CSP.
 
-Não há novas variáveis obrigatórias. Implantação: `npm ci`, variáveis existentes, build e deploy normais. O CSS do Leaflet é local, e seus scripts estão no bundle; só tiles/dados saem a terceiros após as ações correspondentes. A página de privacidade descreve os serviços envolvidos. Uma CSP adicionada futuramente deve permitir tiles em `img-src` e o endpoint selecionado em `connect-src`.
+Serviços públicos não oferecem capacidade ilimitada. Para crescimento, planejar
+provedor de tiles e instância Overpass adequados. Não remover créditos e não
+armazenar dados de Places em banco/caches persistentes sem avaliar seus termos.
 
-Serviços públicos não oferecem SLA. Para crescimento, planeje provedor de tiles adequado e instância Overpass própria ou serviço contratado, preserve créditos e monitore uso. Sem custo de API configurado não significa disponibilidade ou capacidade ilimitadas. Não se deve trocar silenciosamente para dados fictícios diante de falha.
+```sh
+npm run lint
+npm run typecheck
+npm test
+PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e -- tests/e2e/neighborhood.spec.ts tests/e2e/admin-previews.spec.ts tests/e2e/admin.spec.ts tests/e2e/public-gallery.spec.ts
+```
 
-Referências primárias:
+Testes usam exclusivamente API de contrato, tiles sintéticos e SDK Google simulado,
+sem custo Google/Places ou consulta a estabelecimentos reais. Cobrem abertura
+inicial, geometria das camadas/resize, essenciais por categoria, distância, seleção,
+cache, XSS, ausência de coordenadas, erro 429 e tentativa manual. A ativação real
+Google depende do operador e requer uma verificação separada com quotas definidas.
 
-- [Leaflet: versão estável](https://leafletjs.com/download.html)
-- [Política dos tiles OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/)
-- [Overpass Private.coffee: termos e privacidade](https://overpass.private.coffee/)
-- [Overpass QL](https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL)
-- [Acesso e capacidade das instâncias públicas](https://dev.overpass-api.de/overpass-doc/en/preface/commons.html)
+Referências primárias consultadas:
 
-## Verificação
+- [Leaflet: invalidateSize](https://leafletjs.com/reference.html#map-invalidatesize)
+- [Política dos tiles OSM](https://operations.osmfoundation.org/policies/tiles/)
+- [Overpass Private.coffee](https://overpass.private.coffee/)
+- [Carregar Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/load-maps-js-api)
+- [Nearby Search (New)](https://developers.google.com/maps/documentation/javascript/nearby-search)
+- [Tipos de Places](https://developers.google.com/maps/documentation/places/web-service/place-types)
+- [Marcadores avançados](https://developers.google.com/maps/documentation/javascript/advanced-markers/html-markers)
+- [Google Maps: faturamento](https://developers.google.com/maps/documentation/javascript/usage-and-billing)
+- [Places: políticas e atribuição](https://developers.google.com/maps/documentation/places/web-service/policies)
 
-Testes de contrato cobrem coordenadas ausentes/inválidas, contato identificado, telefone seguro, distância, whitelists de categoria/raio e payload parcial. Playwright intercepta tiles e Overpass; só a fixture do anúncio 4 contém coordenadas e telefone/endereço sintéticos. Produção não importa esses dados.
+Resultados desta entrega: build e TypeScript concluídos, lint sem erros (aviso
+preexistente de imagem), 46 testes unitários e 42 E2E aprovados; dois casos de
+mouse da galeria são ignorados no perfil mobile. Os seis casos do mapa passaram
+novamente após os ajustes de zoom/destaque. Inspeção visual realizada em desktop
+e mobile com tiles sintéticos, sem confundir a fixture com geografia real.
 
-Uma checagem real separada, com consulta mínima em um ponto público de Curitiba, recebeu HTTP 406 em `overpass-api.de`; a instância Private.coffee teve timeout de 25 s neste ambiente. Não há afirmação de sucesso da consulta real ou de disponibilidade em produção. Falhas do provedor são recuperáveis na interface. Não foram feitos polling nem novas tentativas automáticas contra esses serviços.
-
-Resultados em 21/10/2026: TypeScript e build passaram; lint terminou sem erros, com um aviso preexistente em `media-image.tsx`; 19 testes unitários/contrato passaram. A regressão completa teve 58 jornadas aprovadas, 3 omitidas por dispositivo e uma falha intermitente de histórico na paginação móvel (retorno a `about:blank`). Sem alterar essa jornada, a reexecução de `journeys.spec.ts` e `neighborhood.spec.ts` passou integralmente: 20 testes, incluindo navegação voltar/avançar e os seis casos de mapa/contato em desktop e móvel. Capturas com tiles e dados sintéticos de teste foram inspecionadas; não são evidência de resposta do provedor real.
+Checagem externa separada: a API pública retornou 200 e forneceu coordenadas
+públicas do anúncio #2. A consulta direta de diagnóstico ao Private.coffee retornou
+429; uma alternativa em overpass-api.de retornou 406. No Chrome, a partir da origem
+pública da Morada, não foi possível obter resposta utilizável nessa rede. Não foi
+validado retorno real de estabelecimentos. O provedor padrão foi preservado,
+sem rodízio/failover automático nem tentativas em loop; a interface mostra falha
+recuperável, sem declarar busca vazia ou criar dados. Disponibilidade do serviço
+externo e ativação Google permanecem verificações operacionais separadas.

@@ -1,161 +1,111 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import type * as Leaflet from "leaflet";
-import { MapPin, ArrowUpRight } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { MapPin, ArrowUpRight, Croissant, Pill, ShoppingBasket, BusFront, Store, Layers, LocateFixed, RefreshCw } from "lucide-react";
 import { formatDistance, mapsUrl, walkingRoute, type Coordinates } from "@/lib/property-location";
-import { safeUrl } from "@/lib/presentation";
-import { nearbyCategories, nearbyQuery, parseNearby, type NearbyCategory, type NearbyPlace } from "@/lib/nearby";
+import { nearbyCategories, type NearbyPlace, type NearbySelection } from "@/lib/nearby";
+import type { NeighborhoodMap } from "@/lib/neighborhood-map";
+const icons = { bakery: Croissant, pharmacy: Pill, supermarket: ShoppingBasket, bus: BusFront, shops: Store };
+const provider = process.env.NEXT_PUBLIC_MAPS_PROVIDER ?? "openstreetmap";
 export function PropertyNeighborhood({ point, location }: { point: Coordinates | null; location: string }) {
+  return <section id="localizacao" className="detail-section detail-anchor neighborhood" aria-labelledby="location-title">
+    <span className="eyebrow">O LUGAR E SEU ENTORNO</span>
+    <h2 id="location-title">Como é a vida por aqui?</h2>
+    <p className="neighborhood-address"><MapPin size={18} aria-hidden="true" /> {location || "Localização não informada"}</p>
+    {!point ? <p>A fonte não publicou coordenadas para este imóvel. Consulte o endereço e a localização com o anunciante.</p>
+      : <NeighborhoodPanel key={`${point.lat}:${point.lng}:${provider}`} point={point} />}
+  </section>;
+}
+function NeighborhoodPanel({ point }: { point: Coordinates }) {
   const container = useRef<HTMLDivElement>(null);
-  const map = useRef<Leaflet.Map | null>(null);
-  const leaflet = useRef<typeof Leaflet | null>(null);
-  const pins = useRef<Leaflet.LayerGroup | null>(null);
-  const line = useRef<Leaflet.Polyline | null>(null);
+  const driver = useRef<NeighborhoodMap | null>(null);
   const abort = useRef<AbortController | null>(null);
   const cache = useRef(new Map<string, NearbyPlace[]>());
-  const mounted = useRef(true);
-  const lastRequest = useRef(0);
-  const opening = useRef(false);
+  const mounted = useRef(false);
+  const requesting = useRef(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [mapError, setMapError] = useState("");
   const [error, setError] = useState("");
   const [tileError, setTileError] = useState(false);
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
   const [selection, setSelection] = useState<string | null>(null);
-  const [category, setCategory] = useState<NearbyCategory>("bakery");
+  const [category, setCategory] = useState<NearbySelection>("essentials");
   const [radius, setRadius] = useState(500);
   const [searched, setSearched] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const choosePlace = useCallback((place: NearbyPlace) => { setSelection(place.id); driver.current?.select(place); }, []);
+  const search = useCallback(async (map: NeighborhoodMap, next: NearbySelection, distance: number) => {
+    if (requesting.current) return;
+    requesting.current = true; setBusy(true); setError(""); setSelection(null); setSearched(false);
+    setPlaces([]); map.setPlaces([], choosePlace);
+    const key = `${next}:${distance}`;
+    const controller = new AbortController(); abort.current = controller;
+    try {
+      const cached = provider === "openstreetmap" ? cache.current.get(key) : undefined;
+      const results = cached ?? await map.search(next, distance, AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]));
+      if (controller.signal.aborted || !mounted.current) return;
+      if (provider === "openstreetmap") cache.current.set(key, results);
+      map.setPlaces(results, choosePlace); setPlaces(results); setSearched(true);
+    } catch (cause) {
+      if (!controller.signal.aborted && mounted.current) setError(cause instanceof Error && cause.message === "rate_limited" ? "O serviço está ocupado. Aguarde um pouco antes de tentar novamente." : "Não foi possível consultar os arredores. Tente novamente ou consulte o Google Maps.");
+    } finally {
+      if (abort.current === controller) { requesting.current = false; if (mounted.current) setBusy(false); }
+    }
+  }, [choosePlace]);
   useEffect(() => {
     mounted.current = true;
-    return () => {
-      mounted.current = false;
-      abort.current?.abort();
-      map.current?.remove();
-      map.current = null;
-    };
-  }, []);
-  function clearPlaces() {
-    pins.current?.clearLayers();
-    line.current?.remove();
-    setSelection(null);
-    setPlaces([]);
-    setSearched(false);
-    setError("");
-  }
-  function selectPlace(place: NearbyPlace) {
-    if (!map.current || !point || !leaflet.current) return;
-    setSelection(place.id);
-    line.current?.remove();
-    line.current = leaflet.current.polyline([[point.lat, point.lng], [place.point.lat, place.point.lng]], { color: "#a83f2c", weight: 2, dashArray: "6 6" }).addTo(map.current);
-    map.current.fitBounds(line.current.getBounds(), { padding: [50, 50], maxZoom: 17, animate: false });
-  }
-  async function openMap() {
-    if (!point || !container.current || opening.current) return;
-    opening.current = true;
-    setBusy(true);
-    setError("");
-    try {
-      const L = await import("leaflet");
-      if (!mounted.current || !container.current) return;
-      leaflet.current = L;
-      map.current = L.map(container.current, { scrollWheelZoom: false }).setView([point.lat, point.lng], 15);
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
-      }).on("tileerror", () => { if (mounted.current) setTileError(true); }).addTo(map.current);
-      L.marker([point.lat, point.lng], { icon: L.divIcon({ className: "neighborhood-home-pin", html: "Imóvel", iconSize: [66, 32], iconAnchor: [33, 32] }), title: "Ponto publicado do imóvel", alt: "Ponto publicado do imóvel" }).addTo(map.current);
-      pins.current = L.layerGroup().addTo(map.current);
-      setReady(true);
-      requestAnimationFrame(() => map.current?.invalidateSize());
-    } catch {
-      map.current?.remove();
-      map.current = null;
-      setError("Não foi possível abrir o mapa. Tente novamente ou abra o link externo.");
-    } finally {
-      opening.current = false;
-      if (mounted.current) setBusy(false);
+    const setup = new AbortController();
+    let instance: NeighborhoodMap | null = null;
+    let observer: ResizeObserver | null = null;
+    async function initialize() {
+      try {
+        const create = provider === "google" ? (await import("@/lib/neighborhood-map-google")).createGoogleMap : provider === "openstreetmap" ? (await import("@/lib/neighborhood-map-leaflet")).createLeafletMap : null;
+        if (!create) throw new Error("invalid_provider");
+        if (setup.signal.aborted || !container.current) return;
+        instance = await create({ container: container.current, point, signal: setup.signal, onError: () => { if (!setup.signal.aborted) { if (provider === "google") setMapError("O Google Maps não autorizou o carregamento. Confira chave, APIs, faturamento e domínio configurados."); else setTileError(true); } } });
+        if (setup.signal.aborted) { instance.destroy(); instance = null; return; }
+        driver.current = instance; setReady(true); instance.resize();
+        if (typeof ResizeObserver !== "undefined") { observer = new ResizeObserver(() => instance?.resize()); observer.observe(container.current); }
+        void search(instance, "essentials", 500);
+      } catch (cause) {
+        if (!setup.signal.aborted) setMapError(cause instanceof Error && cause.message === "google_maps_not_configured" ? "O Google Maps ainda precisa de uma chave e um Map ID configurados. Use o link externo para consultar a localização." : "Não foi possível abrir o mapa. Tente novamente ou use o link externo.");
+      }
     }
+    void initialize();
+    return () => { mounted.current = false; setup.abort(); abort.current?.abort(); requesting.current = false; observer?.disconnect(); instance?.destroy(); if (driver.current === instance) driver.current = null; };
+  }, [point, search, attempt]);
+  function change(next: NearbySelection, distance = radius) {
+    setCategory(next); setRadius(distance);
+    if (driver.current) void search(driver.current, next, distance);
   }
-  function showPlaces(results: NearbyPlace[]) {
-    if (!leaflet.current || !map.current || !point) return;
-    const L = leaflet.current;
-    const bounds = L.latLngBounds([[point.lat, point.lng]]);
-    results.forEach((place, index) => {
-      const marker = L.marker([place.point.lat, place.point.lng], {
-        icon: L.divIcon({ className: "neighborhood-place-pin", html: String(index + 1), iconSize: [32, 32], iconAnchor: [16, 32] }),
-        title: `${place.name}, ${formatDistance(place.meters)} em linha reta`, alt: place.name,
-      }).on("click", () => selectPlace(place));
-      const label = document.createElement("span");
-      label.textContent = place.name; // External names never become HTML.
-      marker.bindTooltip(label);
-      pins.current?.addLayer(marker);
-      bounds.extend([place.point.lat, place.point.lng]);
-    });
-    if (results.length) map.current.fitBounds(bounds, { padding: [45, 45], maxZoom: 16, animate: false });
-    setPlaces(results);
-    setSearched(true);
-  }
-  async function search() {
-    if (!point || !map.current || busy || opening.current) return;
-    const cacheKey = `${category}:${radius}`;
-    clearPlaces();
-    const previous = cache.current.get(cacheKey);
-    if (previous) { showPlaces(previous); return; }
-    if (Date.now() - lastRequest.current < 5000) {
-      setError("Aguarde alguns segundos antes de fazer outra consulta.");
-      return;
-    }
-    opening.current = true;
-    lastRequest.current = Date.now();
-    abort.current = new AbortController();
-    const timer = setTimeout(() => abort.current?.abort(), 20000);
-    setBusy(true);
-    try {
-      const endpoint = safeUrl(process.env.NEXT_PUBLIC_OVERPASS_API_URL || "https://overpass.private.coffee/api/interpreter");
-      if (!endpoint) throw new Error("invalid_provider");
-      const response = await fetch(endpoint, {
-        method: "POST", body: new URLSearchParams({ data: nearbyQuery(point, category, radius) }),
-        signal: abort.current.signal, credentials: "omit", referrerPolicy: "strict-origin-when-cross-origin",
-      });
-      if (!response.ok) throw new Error(response.status === 429 ? "rate_limited" : "nearby_unavailable");
-      const results = parseNearby(await response.json(), point, category, radius);
-      if (!mounted.current) return;
-      cache.current.set(cacheKey, results);
-      showPlaces(results);
-    } catch (e) {
-      if (mounted.current) setError(e instanceof Error && e.message === "rate_limited" ? "O serviço está ocupado. Aguarde um pouco antes de tentar novamente." : "Não foi possível consultar os arredores. Você pode tentar novamente em instantes.");
-    } finally {
-      clearTimeout(timer);
-      opening.current = false;
-      if (mounted.current) setBusy(false);
-    }
-  }
-  return (
-    <section id="localizacao" className="detail-section detail-anchor neighborhood" aria-labelledby="location-title">
-      <span className="eyebrow">O LUGAR E SEU ENTORNO</span>
-      <h2 id="location-title">Como é a vida por aqui?</h2>
-      <p><MapPin size={18} /> {location || "Localização não informada"}</p>
-      {!point ? <p>A fonte não publicou coordenadas para este imóvel. Consulte o endereço e a localização com o anunciante.</p> : <>
-        <p>O mapa utiliza o ponto publicado pelo anunciante, que pode ser aproximado. Confirme a posição exata antes de visitar.</p>
-        <a className="text-link" href={mapsUrl(point)} target="_blank" rel="noopener noreferrer">Abrir localização no Google Maps <ArrowUpRight size={16} /></a>
-        <div ref={container} className={`neighborhood-map ${ready ? "is-ready" : ""}`} aria-label="Mapa do imóvel e locais próximos" />
-        {!ready && <div className="neighborhood-consent"><MapPin size={30} /><h3>Conheça a região no mapa</h3><p>Ao carregar, seu navegador se conecta ao OpenStreetMap. A busca de estabelecimentos só acontece quando você solicitar.</p><button className="button primary" onClick={openMap} disabled={busy}>{busy ? "Carregando mapa…" : "Carregar mapa e explorar"}</button></div>}
-        {tileError && <p role="status">Algumas partes do mapa não carregaram. A lista de locais e o link externo continuam disponíveis.</p>}
-        {ready && <>
-          <form className="neighborhood-controls" onSubmit={(e) => { e.preventDefault(); void search(); }}>
-            <label>O que você quer ter por perto?<select value={category} disabled={busy} onChange={(e) => { clearPlaces(); setCategory(e.target.value as NearbyCategory); }}>{Object.entries(nearbyCategories).map(([value, c]) => <option key={value} value={value}>{c.label}</option>)}</select></label>
-            <label>Raio de busca<select value={radius} disabled={busy} onChange={(e) => { clearPlaces(); setRadius(Number(e.target.value)); }}><option value={500}>500 m</option><option value={1000}>1 km</option></select></label>
-            <button className="button primary" disabled={busy}>{busy ? "Consultando…" : "Explorar arredores"}</button>
-          </form>
-          <p className="neighborhood-note">Distâncias aproximadas em linha reta a partir do ponto publicado; não são percursos a pé. A linha no mapa conecta os pontos e não representa uma rota. Até 12 locais, dentre os registros retornados pelo OpenStreetMap; a cobertura pode ser incompleta.</p>
-          <p role="status" aria-live="polite">{busy ? "Consultando locais próximos…" : searched ? places.length ? `${places.length} locais exibidos nesta consulta.` : "Nenhum local retornado nesta consulta. Isso não significa que não existam estabelecimentos na região." : "Escolha uma categoria para explorar."}</p>
-          <ol className="neighborhood-places">{places.map((place, i) => <li key={place.id} className={selection === place.id ? "is-selected" : ""}>
-            <button className="neighborhood-select" onClick={() => selectPlace(place)} aria-pressed={selection === place.id}><span className="neighborhood-number">{i + 1}</span><span><strong>{place.name}</strong><small>{formatDistance(place.meters)} em linha reta</small></span></button>
-            <div className="neighborhood-links"><a href={walkingRoute(point, place.point)} target="_blank" rel="noopener noreferrer">Traçar rota a pé no Google ↗</a><a href={place.url} target="_blank" rel="noopener noreferrer">Ver no OpenStreetMap ↗</a></div>
-          </li>)}</ol>
-          <p className="neighborhood-credit">Dados © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Informar problema no mapa</a>. Os cadastros podem mudar; confirme diretamente com o local.</p>
-        </>}
-        {error && <p role="alert">{error}</p>}
-      </>}
-    </section>
-  );
+  const google = provider === "google";
+  const label = category === "essentials" ? "Serviços essenciais" : nearbyCategories[category].label;
+  return <>
+    <div className="neighborhood-intro"><p>Ponto publicado pelo anunciante; pode ser aproximado. Confirme a posição exata antes de visitar.</p><a className="text-link" href={mapsUrl(point)} target="_blank" rel="noopener noreferrer">Abrir no Google Maps <ArrowUpRight size={16} aria-hidden="true" /></a></div>
+    <div className="neighborhood-explorer">
+      <div className="nearby-toolbar"><div className="nearby-heading"><strong>Seu dia a dia, por perto</strong><span>Explore o que faz diferença na sua rotina.</span></div>
+        <label className="nearby-radius">Raio de busca<select value={radius} disabled={!ready || busy || !!mapError} onChange={event => change(category, Number(event.target.value))}><option value={500}>500 m</option><option value={1000}>1 km</option></select></label>
+      </div>
+      <div className="nearby-categories" aria-label="Categorias de locais próximos">
+        {(["essentials", ...Object.keys(nearbyCategories)] as NearbySelection[]).map(key => { const Icon = key === "essentials" ? Layers : icons[key]; return <button key={key} type="button" data-category={key} aria-pressed={category === key} disabled={!ready || busy || !!mapError} onClick={() => change(key)}><Icon size={17} aria-hidden="true" />{key === "essentials" ? "Essenciais" : nearbyCategories[key].label}</button>; })}
+      </div>
+      <div className="neighborhood-map" aria-label="Mapa do imóvel e locais próximos" aria-busy={!ready && !mapError}>
+        <div ref={container} className="neighborhood-map-canvas" />
+        {!ready && !mapError && <div className="neighborhood-map-message" role="status">Carregando mapa…</div>}
+        {mapError && <div className="neighborhood-map-message" role="alert"><p>{mapError}</p><button className="button secondary" type="button" onClick={() => { setMapError(""); setReady(false); setAttempt(value => value + 1); }}>Tentar abrir mapa</button></div>}
+        {ready && !mapError && <button className="neighborhood-recenter" type="button" onClick={() => driver.current?.reset()} aria-label="Centralizar no imóvel" title="Centralizar no imóvel"><LocateFixed size={20} aria-hidden="true" /></button>}
+      </div>
+      <div className="nearby-results-header"><p role="status" aria-live="polite" aria-atomic="true">{busy ? `Buscando ${label.toLowerCase()}…` : error ? error : searched ? places.length ? `${places.length} locais exibidos · ${label}` : "Nenhum local retornado nesta consulta. A cobertura pode ser incompleta." : "Os locais próximos aparecerão aqui."}</p>
+        {ready && !mapError && <button className="text-link" type="button" disabled={busy} onClick={() => { cache.current.delete(`${category}:${radius}`); if (driver.current) void search(driver.current, category, radius); }}><RefreshCw size={14} aria-hidden="true" />{error ? "Tentar novamente" : "Atualizar arredores"}</button>}
+      </div>
+      {tileError && <p className="neighborhood-note" role="status">Algumas partes do mapa não carregaram. A lista de locais e o link externo continuam disponíveis.</p>}
+      <ol className="neighborhood-places">{places.map((place, index) => { const Icon = icons[place.category]; return <li key={place.id} data-category={place.category} className={selection === place.id ? "is-selected" : ""}>
+        <button className="neighborhood-select" type="button" onClick={() => choosePlace(place)} aria-pressed={selection === place.id}><span className="neighborhood-number"><Icon size={19} aria-hidden="true" /><span>{index + 1}</span></span><span className="nearby-place-name"><small>{nearbyCategories[place.category].singular}</small><strong>{place.name}</strong></span><span className="nearby-distance"><strong>{formatDistance(place.meters)}</strong><small>em linha reta</small></span></button>
+        <div className="neighborhood-links"><a href={place.url} target="_blank" rel="noopener noreferrer">{google ? "Ver no Google Maps" : "Ver no OpenStreetMap"} <ArrowUpRight size={13} aria-hidden="true" /></a><a href={walkingRoute(point, place.point)} target="_blank" rel="noopener noreferrer">Consultar rota <ArrowUpRight size={13} aria-hidden="true" /></a></div>
+        {place.attributions?.map((attribution, i) => <small key={i} className="nearby-attribution">{attribution.url ? <a href={attribution.url} target="_blank" rel="noopener noreferrer">{attribution.name}</a> : attribution.name}</small>)}
+      </li>; })}</ol>
+      <p className="neighborhood-note">Distâncias aproximadas em linha reta a partir do ponto publicado; não são percursos a pé. A linha entre os pontos não representa uma rota. {category === "essentials" ? "Até 3 locais por categoria" : "Até 12 locais"}, dentre os registros retornados. Confirme horários e serviços diretamente com cada local.</p>
+      <p className="neighborhood-credit">{google ? <>Mapa e locais: <span className="google-maps-credit" translate="no">Google Maps</span>.</> : <>Dados © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Informar problema no mapa</a>.</>}</p>
+    </div>
+  </>;
 }
