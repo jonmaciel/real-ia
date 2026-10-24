@@ -11,6 +11,23 @@ Referência solicitada: [anúncio Rentola em Curitiba](https://rentola.com.br/en
 - A área sem classificação continua rotulada Área informada, sem equivalência com área útil. Sem atributos, a ficha informa a ausência.
 - Descrição, fontes, contatos e mapa gratuito mantidos. Nenhuma classificação “abaixo do mercado”, alertas, recomendações ou bloqueio por cadastro foi adicionada: esses recursos vistos na referência não têm sustentação no contrato atual do Morada.
 
+## Composição de custos
+
+O detalhe preserva `pricing` do contrato público. `PropertyCosts` apresenta os
+valores brutos, desconto condicionado, aluguel anunciado, taxas com periodicidade
+própria e `total_amount` como total informado pela origem. Não há soma, rateio ou
+cálculo de total no navegador. Ausência e zero explícito são distintos. Sem total,
+o painel informa a ausência. Em compra, despesas recorrentes ficam separadas do
+preço de venda. Painéis com composição completa acompanham a rolagem normal para
+manter todos os custos e ações acessíveis em telas de pouca altura.
+
+As fontes têm composição independente, acessível em “Preço e taxas desta origem”.
+O mesmo componente é reutilizado na revisão quando a API retorna preços compostos.
+O schema é compartilhado por detalhe, fontes, admin e recomendações do assistente.
+Em uma consulta pública de produção, o imóvel #2 retornou aluguel de R$ 1.200,
+bruto de R$ 1.500, desconto condicionado de R$ 300 e total informado de R$ 1.577,72,
+além das taxas; nenhuma geração de IA foi necessária para ler esses campos.
+
 ## Arquivos
 
 `PropertyGallery` mantém as interações existentes e ganhou prévias; `PropertyFacts` é Server Component, com adaptação central em `presentation.ts`. A página de detalhe recebeu a composição em áreas de grid (introdução, preço e corpo), e os estilos continuam em `portal.css`. Não foram adicionadas dependências, imagens ilustrativas nos imóveis ou endpoints.

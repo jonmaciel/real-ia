@@ -15,6 +15,28 @@
 .question-turn strong { display: block; margin-bottom: 6px; }
 .question-user { padding: 12px; border-radius: 12px; background: #fff2e9; white-space: pre-wrap; }
 .question-answer > p { white-space: pre-wrap; }
+.assistant-markdown { min-width: 0; max-width: 100%; overflow-wrap: anywhere; color: var(--muted); }
+.assistant-markdown > :first-child { margin-top: 0; }
+.assistant-markdown > :last-child { margin-bottom: 0; }
+.assistant-markdown p { margin: .75em 0; line-height: inherit; }
+.question-turn .assistant-markdown strong, .assistant-markdown strong { display: inline; margin: 0; font-weight: 700; }
+.assistant-markdown h3, .assistant-markdown h4, .assistant-markdown h5, .assistant-markdown h6 { margin: 1em 0 .5em; font-size: 1.08em; line-height: 1.5; color: var(--ink); }
+.assistant-markdown ul, .assistant-markdown ol { padding-left: 1.5em; margin: .75em 0; }
+.assistant-markdown li + li { margin-top: .35em; }
+.assistant-markdown li > p { margin: .35em 0; }
+.assistant-markdown a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.assistant-markdown blockquote { margin: .75em 0; padding-left: 12px; border-left: 3px solid var(--border); }
+.assistant-markdown code { padding: 2px 4px; border-radius: 4px; background: #f0f3f5; font-size: .92em; white-space: pre-wrap; }
+.assistant-markdown pre { max-width: 100%; overflow-x: auto; padding: 12px; border-radius: 8px; background: #f0f3f5; }
+.assistant-markdown pre code { padding: 0; white-space: pre; overflow-wrap: normal; }
+.assistant-markdown hr { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
+.markdown-table { max-width: 100%; overflow-x: auto; margin: .75em 0; scrollbar-width: thin; }
+.markdown-table table { width: 100%; border-collapse: collapse; font-size: .92em; }
+.markdown-table th, .markdown-table td { min-width: 100px; padding: 8px; text-align: left; border: 1px solid var(--border); }
+.markdown-table th { background: #f5f6f7; color: var(--ink); font-weight: 650; }
+.assistant-markdown .contains-task-list { list-style: none; padding-left: 0; }
+.assistant-markdown .task-list-item input { width: auto; margin-right: 6px; }
+.search-ai-status .assistant-markdown { margin-top: 4px; }
 .question-citations { padding-left: 18px; }
 .question-citations span, .question-answer small { display: block; font-size: 11px; color: var(--muted); }
 .question-citations a { text-decoration: underline; text-underline-offset: 3px; }

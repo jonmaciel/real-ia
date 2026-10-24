@@ -22,6 +22,7 @@ import {
   safeUrl,
 } from "@/lib/presentation";
 import { PropertyFeatures, PropertyPrice } from "./properties";
+import { PropertyCosts } from "./property-costs";
 import { ReviewData } from "./review-data";
 export function ListingReview({
   initialListing,
@@ -185,6 +186,7 @@ export function ListingReview({
             <h2>Dados do anúncio</h2>
             <p>{modality(listing.listing_type)}</p>
             <PropertyPrice property={listing} />
+            {listing.pricing && <PropertyCosts property={listing} />}
             <p>{availability(listing.availability)}</p>
             <PropertyFeatures property={listing} />
             <p className="description">
@@ -239,6 +241,7 @@ export function ListingReview({
                   {money(source.price, source.currency)}
                   {source.price != null ? period(source.price_type) : ""}
                 </p>
+                {source.pricing && <PropertyCosts property={{ ...source, listing_type: listing.listing_type }} />}
                 <p>
                   {availability(source.availability)} ·{" "}
                   {lifecycleLabel(source.lifecycle)}

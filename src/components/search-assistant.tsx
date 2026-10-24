@@ -6,6 +6,7 @@ import { assistantSearchParams, exactFiltersSchema, type AssistantSearch } from 
 import type { AssistantFilters } from "@/lib/assistant-contracts";
 import { useAssistant } from "./assistant-provider";
 import { AssistantAudio } from "./assistant-audio";
+import { AssistantMarkdown } from "./assistant-markdown";
 
 export function SearchAssistant({ manualForm, children, query, queryKey, resultError }: {
   manualForm: ReactNode; children: ReactNode; query: AssistantSearch; queryKey: string; resultError?: string;
@@ -42,8 +43,9 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
     : pending ? "Atualizando imóveis…"
     : chat.error ? chat.error.message
     : updateError || (expectedKey === queryKey && resultError) ? "Não foi possível atualizar a lista. Tente novamente em instantes."
-    : updated ? last?.action === "clarify" ? `Lista atualizada. ${last.answer}` : "Lista atualizada."
+    : updated ? "Lista atualizada."
     : "";
+  const clarification = updated && !updating && !chat.error && last?.action === "clarify" ? last : null;
   function send(audio?: File): Promise<boolean> {
     if (updating || (!audio && audioActive)) return Promise.resolve(false);
     setUpdateError(false);
@@ -108,7 +110,7 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
         </form>
         <AssistantAudio key={`${chat.state.selectedId}:${chat.conversationVersion}`} active={!manual} disabled={updating || chat.waiting || chat.error?.code === "invalid_search_token" || chat.error?.status === 404} onActiveChange={setAudioActive} onSend={file => send(file)} />
         {last?.input_type === "audio" && last.transcription && <p className="audio-transcription"><strong>Transcrição:</strong> {last.transcription.text}</p>}
-        <p className="search-ai-status" role="status" aria-live="polite" aria-atomic="true">{message}{chat.waiting && ` Tente novamente em ${chat.secondsLeft} s.`}</p>
+        <div className="search-ai-status" role="status" aria-live="polite" aria-atomic="true">{message}{clarification && <> <AssistantMarkdown text={clarification.answer} citations={clarification.citations} /></>}{chat.waiting && ` Tente novamente em ${chat.secondsLeft} s.`}</div>
         {chat.busy && <button type="button" className="search-ai-restart" onClick={() => chat.cancel()}>Cancelar envio</button>}
         {(chat.error?.code === "invalid_search_token" || chat.error?.status === 404) && <button type="button" className="search-ai-restart" onClick={restart}>Iniciar nova busca</button>}
       </div>

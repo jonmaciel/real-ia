@@ -1,15 +1,11 @@
 import { z } from "zod";
-import { listingSchema } from "./contracts";
+import { listingSchema, pricingSchema } from "./contracts";
+export { pricingSchema } from "./contracts";
 import { historyMessageSchema } from "./property-questions";
 export const assistantIdSchema = z.union([z.number().int().positive().safe(), z.string().regex(/^[1-9]\d{0,18}$/)]).refine(v => { try { return BigInt(v) <= 9223372036854775807n; } catch { return false; } });
 const token = z.string().min(1).max(24000).refine(v => new TextEncoder().encode(v).length <= 24000);
 const decimal = z.string().max(100).regex(/^\d+(\.\d+)?$/);
 const optionalText = z.string().nullish();
-export const pricingSchema = z.object({
-  base_amount: decimal.nullish(), gross_amount: decimal.nullish(), discount_amount: decimal.nullish(), discount_condition: optionalText,
-  total_amount: decimal.nullish(), total_period: optionalText, total_source: optionalText,
-  charges: z.array(z.object({ code: optionalText, label: optionalText, amount: decimal.nullish(), period: optionalText })).max(30).optional(),
-});
 export const addressSchema = z.object({ street: optionalText, number: optionalText, complement: optionalText, postal_code: optionalText, city: optionalText, neighborhood: optionalText, region: optionalText, country: optionalText });
 export const recommendationSchema = listingSchema.omit({ category_id: true }).extend({
   id: assistantIdSchema, listing_type: z.enum(["sale", "rental"]), pricing: pricingSchema.nullish(), address: addressSchema.nullish(), original_url: optionalText,

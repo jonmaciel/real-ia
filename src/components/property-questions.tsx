@@ -7,6 +7,7 @@ import { assistantFilterLabels } from "@/lib/assistant-presentation";
 import { useAssistant } from "./assistant-provider";
 import { AssistantRecommendations } from "./assistant-recommendations";
 import { AssistantAudio } from "./assistant-audio";
+import { AssistantMarkdown } from "./assistant-markdown";
 const propertySuggestions = ["Qual é o custo total?", "Quais taxas estão incluídas?", "Como é a localização?", "Tem mercado ou escola por perto?"];
 export function PropertyQuestions({ inline = false, active = true }: { inline?: boolean; active?: boolean }) {
   const chat = useAssistant();
@@ -43,7 +44,7 @@ export function PropertyQuestions({ inline = false, active = true }: { inline?: 
           <p className="question-user"><strong>{turn.response.input_type === "audio" ? "Você · áudio transcrito" : "Você"}</strong>{turn.response.transcription?.text ?? turn.question}</p>
           <div className="question-answer"><strong>Morada</strong>
             <small>{turn.response.mode === "property" ? `Resposta sobre o imóvel #${turn.response.selected_listing_id}` : "Busca no catálogo"}</small>
-            <p>{turn.response.answer}</p>
+            <AssistantMarkdown text={turn.response.answer} citations={turn.response.citations} />
             {turn.response.action === "no_results" && <p>Não há novas opções para estes critérios e as exclusões desta conversa. Ajuste sua busca por mensagem ou inicie uma nova busca.</p>}
             {turn.response.unverified_preferences.length > 0 && <div className="assistant-unverified"><strong>Ainda não foi possível verificar</strong><ul>{turn.response.unverified_preferences.map((item, j) => <li key={j}>{item}</li>)}</ul></div>}
             <AssistantRecommendations cards={turn.response.recommendations} onSelect={chat.select} />

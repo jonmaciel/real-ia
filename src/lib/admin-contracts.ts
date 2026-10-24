@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { id, listingSchema } from "./contracts";
+import { id, listingSchema, pricingSchema } from "./contracts";
 export const statuses = ["draft", "published", "expired", "removed"] as const;
 export const reviewSchema = z
   .object({
@@ -26,6 +26,7 @@ export const adminSourceSchema = z.object({
     .nullish(),
   currency: z.string().nullish(),
   price_type: z.string().nullish(),
+  pricing: pricingSchema.nullish(),
   availability: z.string().nullish(),
   last_observed_at: z.string().nullish(),
   extraction_metadata: z.record(z.string(), z.unknown()).nullish(),

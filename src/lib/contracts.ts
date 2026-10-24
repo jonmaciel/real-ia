@@ -1,6 +1,23 @@
 import { z } from "zod";
 export const id = z.union([z.number().int().positive(), z.string().min(1)]);
 const optional = z.string().nullish();
+const decimalAmount = z.string().max(100).regex(/^\d+(\.\d+)?$/);
+export const pricingSchema = z.object({
+  base_amount: decimalAmount.nullish(),
+  gross_amount: decimalAmount.nullish(),
+  discount_amount: decimalAmount.nullish(),
+  discount_condition: optional,
+  total_amount: decimalAmount.nullish(),
+  total_period: optional,
+  total_source: optional,
+  charges: z.array(z.object({
+    code: optional,
+    label: optional,
+    amount: decimalAmount.nullish(),
+    period: optional,
+  })).max(30).optional(),
+});
+export type Pricing = z.infer<typeof pricingSchema>;
 export const listingSchema = z.object({
   id,
   category_id: id,
@@ -14,6 +31,7 @@ export const listingSchema = z.object({
     .nullish(),
   currency: optional,
   price_type: optional,
+  pricing: pricingSchema.nullish(),
   availability: optional,
   real_estate: z.record(z.string(), z.unknown()).nullish(),
   structured_attributes: z.record(z.string(), z.unknown()).nullish(),
@@ -60,6 +78,8 @@ export const sourceSchema = z.object({
   original_url: z.string(),
   price: z.string().nullish(),
   currency: optional,
+  price_type: optional,
+  pricing: pricingSchema.nullish(),
   availability: optional,
   first_observed_at: optional,
   last_observed_at: optional,

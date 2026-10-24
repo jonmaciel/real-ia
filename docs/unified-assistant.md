@@ -217,3 +217,13 @@ Validação das pills: 38 testes unitários e 38 testes de navegador aprovados,
 incluindo exibição após cada prompt, remoção individual, preservação dos demais
 critérios/exclusões e ausência de chamadas de IA ao remover pills. Build e
 typecheck aprovados; lint sem erros e com o mesmo aviso preexistente.
+
+## Markdown nas respostas
+
+`AssistantMarkdown` renderiza as respostas do chat e a última clarificação da
+busca com CommonMark e GFM (negrito, listas, links, tabelas e código). O histórico
+enviado à API mantém o texto original. Referências como `[source-2]` recebem link
+somente quando o ID e uma URL segura constam nas citações daquela resposta.
+HTML é exibido como texto; não há execução de HTML nem carregamento de imagens
+externas. Links aceitam apenas HTTP/HTTPS sem credenciais e abrem com
+`noopener noreferrer`. Tabelas e código têm rolagem própria na janela mobile.

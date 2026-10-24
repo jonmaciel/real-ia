@@ -17,6 +17,7 @@ import {
   date,
   modality,
   money,
+  period,
   propertyHref,
   safeUrl,
 } from "@/lib/presentation";
@@ -26,6 +27,7 @@ import {
   ErrorState,
 } from "@/components/properties";
 import { PropertyFacts } from "@/components/property-facts";
+import { PropertyCosts } from "@/components/property-costs";
 import { PropertyNeighborhood } from "@/components/property-neighborhood";
 import { publicCoordinates, publishedContact } from "@/lib/property-location";
 import { ShareButton } from "@/components/share";
@@ -132,16 +134,10 @@ export default async function Detail({ params }: Props) {
           <p>
             {modality(p.listing_type)} · {p.currency ?? "Moeda não informada"}
           </p>
+          <PropertyCosts property={p} />
           <a className="button primary source-shortcut" href="#fontes">
             Consultar anúncios de origem <ArrowUpRight size={17} />
           </a>
-          <div className="price-context">
-            <strong>Antes de decidir</strong>
-          <p>
-            Condomínio, IPTU e outras taxas não informados. O preço anunciado
-            não representa necessariamente o custo total.
-          </p>
-          </div>
           <details className="listing-dates"><summary>Datas deste anúncio</summary>
           {date(p.published_at) && <p>Publicado em {date(p.published_at)}</p>}
           {date(p.first_seen_at) && (
@@ -196,7 +192,8 @@ export default async function Detail({ params }: Props) {
                     <div className="source-row" key={s.id}>
                       <div>
                         <h3>{s.source.name}</h3>
-                        <p>{money(s.price, s.currency)}</p>
+                        <p>{money(s.price, s.currency)}{s.price != null ? period(s.price_type) : ""}</p>
+                        {s.pricing && <details className="source-costs"><summary>Preço e taxas desta origem</summary><PropertyCosts property={{ ...s, listing_type: p.listing_type }} /></details>}
                         {s.availability && (
                           <small>
                             Disponibilidade informada:{" "}

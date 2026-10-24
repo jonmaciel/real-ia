@@ -7,6 +7,7 @@ import { parseAssistantSearch } from "../src/lib/assistant-search";
 import { assistantCatalog } from "./assistant-search-fixtures";
 import { createServer } from "node:http";
 import { categories, listings } from "../src/lib/fixtures";
+import { pricingListings, pricingSources } from "./pricing-fixtures";
 const sessions = new Set<string>();
 let counter = 0;
 let assistantCounter = 0;
@@ -243,7 +244,7 @@ createServer(async (req, res) => {
   }
   const match = path.match(/^\/listings\/(\d+)(?:\/(sources|media))?$/);
   if (match) {
-    const p = [...listings, ...publishedRows()].find(
+    const p = [...listings, ...publishedRows(), ...pricingListings].find(
       (p) => String(p.id) === match[1],
     );
     if (!p) return send(404, { error: { code: "not_found" } });
@@ -290,7 +291,7 @@ createServer(async (req, res) => {
                 ]
               : []
           : match[2] === "sources"
-            ? [
+            ? match[1] === "701" ? pricingSources : [
                 {
                   id: 1,
                   original_url: "https://example.com/one",
