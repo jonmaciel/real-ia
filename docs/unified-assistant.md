@@ -41,6 +41,17 @@ comodidades, base de preço nem exclusões ao editar um limite de orçamento.
 O orçamento total mensal é rotulado corretamente. Busca manual independente
 continua usando seu contrato anterior, inclusive palavra-chave no título.
 
+As pills ficam visíveis nos dois modos. Elas são geradas no frontend a partir
+de `GET /assistant/results.meta.applied_filters`, validado no servidor, e usam
+as traduções/formatadores compartilhados com o assistente. A API retorna filtros
+tipados, sem componentes de interface; não é necessário novo endpoint de pills.
+Ao remover um critério, apenas esse campo/item é retirado, a página volta para 1
+e a consulta exata preserva todos os demais campos e exclusões. Remover uma
+comodidade preferida não remove a mesma comodidade obrigatória. Moeda e base do
+orçamento aparecem como contexto, preservando a semântica dos valores. Links de
+remoção não fazem prefetch e não iniciam geração de IA. Erros mostram filtros
+selecionados, sem alegar aplicação bem-sucedida.
+
 Respostas de clarificação precisam fornecer exclusões autoritativas mesmo sem
 `filter_proposal`. A UI aceita `data.excluded_ids` ou os IDs de uma proposta
 validada; se ambos faltarem, mostra falha sem fabricar uma consulta incompleta.
@@ -193,3 +204,8 @@ build e typecheck aprovados. Os testes controlam separadamente a resposta do POS
 e o carregamento dos resultados, confirmando que a consulta da lista não começa
 durante o pensamento e que uma falha do POST mantém os imóveis e o rascunho.
 Lint sem erros, com o aviso preexistente de img. Nenhuma geração paga nesta etapa.
+
+Validação das pills: 38 testes unitários e 38 testes de navegador aprovados,
+incluindo exibição após cada prompt, remoção individual, preservação dos demais
+critérios/exclusões e ausência de chamadas de IA ao remover pills. Build e
+typecheck aprovados; lint sem erros e com o mesmo aviso preexistente.

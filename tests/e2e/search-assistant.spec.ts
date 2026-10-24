@@ -96,11 +96,16 @@ test("cada prompt atualiza a lista principal, inclusive na clarificação, sem s
   await expect(page.locator(".property-grid")).toHaveCount(1);
   await expect(page.locator(".property-card")).toHaveCount(1);
   await expect(page.locator(".property-card")).toContainText("Casa para comprar em Araucária");
+  const pills = page.getByLabel("Filtros aplicados", { exact: true });
+  await expect(pills.getByRole("link", { name: "Remover filtro Araucária", exact: true })).toBeVisible();
+  await expect(pills.getByRole("link", { name: "Remover filtro Casa", exact: true })).toBeVisible();
   await expect(page.locator(".assistant-recommendations, .question-turn")).toHaveCount(0);
   await input.fill("alugar, até 3000"); await input.press("Enter");
   await expect(page.locator(".search-ai-status")).toHaveText("Lista atualizada.");
   await expect(page.locator(".property-card")).toHaveCount(1);
   await expect(page.locator(".property-card")).toContainText("Casa para alugar em Araucária");
+  await expect(pills.getByRole("link", { name: "Remover filtro Alugar", exact: true })).toBeVisible();
+  await expect(pills.getByRole("link", { name: /Remover filtro Até R\$/ })).toBeVisible();
   await expect(page.getByText("Casa para comprar em Araucária", { exact: true })).toHaveCount(0);
   expect(calls).toHaveLength(2); expect(calls[1].history).toHaveLength(2); expect(calls[1].search_token).toBeTruthy();
   const params = new URL(page.url()).searchParams;
@@ -119,6 +124,31 @@ test("cada prompt atualiza a lista principal, inclusive na clarificação, sem s
   await expect(page.getByRole("heading", { name: "Ainda não encontramos seu lugar." })).toBeVisible();
   await page.goBack(); await expect(page.locator(".property-card")).toContainText("Casa para alugar em Araucária");
   await page.goForward(); await expect(page.locator(".property-card")).toHaveCount(0);
+});
+
+test("pills visíveis na IA permitem remover critérios sem apagar outros ou chamar a IA", async ({ page }) => {
+  let calls = 0;
+  page.on("request", request => { if (request.url().includes("/api/assistente/mensagens")) calls++; });
+  await page.goto("/buscar?assistant=1&city=Arauc%C3%A1ria&property_type=house&listing_type=rental&furnished=false&bedrooms=0&price_basis=total_monthly&min_price=0&max_price=4000&amenities=balcony,pet_friendly&preferred_amenities=pet_friendly,gym&excluded_ids=2&page=2&per_page=1");
+  const pills = page.getByLabel("Filtros aplicados", { exact: true });
+  await expect(page.getByRole("tab", { name: "Busca com IA", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(pills.getByRole("link", { name: "Remover filtro Sem mobília", exact: true })).toBeVisible();
+  await expect(pills.getByRole("link", { name: "Remover filtro Mínimo de 0 quartos", exact: true })).toBeVisible();
+  await expect(pills.getByText("Orçamento: total mensal informado pela origem", { exact: true })).toBeVisible();
+  await expect(pills.getByText("1 imóvel excluído", { exact: true })).toBeVisible();
+  await pills.getByRole("link", { name: "Remover filtro Sem mobília", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.has("furnished")).toBe(false);
+  expect(new URL(page.url()).searchParams.get("page")).toBe("1");
+  await pills.getByRole("link", { name: "Remover filtro Preferência: Aceita pets", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("preferred_amenities")).toBe("gym");
+  const params = new URL(page.url()).searchParams;
+  for (const [key, value] of Object.entries({ assistant: "1", city: "Araucária", property_type: "house", listing_type: "rental", bedrooms: "0", price_basis: "total_monthly", max_price: "4000", min_price: "0", excluded_ids: "2", amenities: "balcony,pet_friendly", per_page: "1" })) expect(params.get(key)).toBe(value);
+  await expect(pills.getByRole("link", { name: "Remover filtro Preferência: Academia", exact: true })).toBeVisible();
+  await expect(pills.getByRole("link", { name: "Remover filtro Requisito: Aceita pets", exact: true })).toBeVisible();
+  await expect(page.locator(".property-grid")).toHaveCount(1);
+  expect(calls).toBe(0);
+  await page.getByRole("tab", { name: "Usar filtros", exact: true }).click();
+  await expect(pills.getByRole("link", { name: "Remover filtro Casa", exact: true })).toBeVisible();
 });
 
 test("paginação, reload e orçamento total preservam todos os critérios sem IA extra", async ({ page }) => {

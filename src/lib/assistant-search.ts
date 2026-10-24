@@ -15,6 +15,14 @@ export const exactFiltersSchema = assistantFiltersSchema.extend({
   }
 });
 export type AssistantSearch = { filters: AssistantFilters; excludedIds: string[]; page: number; perPage: number };
+export function removeAssistantFilter(query: AssistantSearch, key: keyof AssistantFilters, value?: string): AssistantSearch {
+  const filters = { ...query.filters };
+  if ((key === "amenities" || key === "preferred_amenities") && value !== undefined) {
+    filters[key] = (filters[key] ?? []).filter(item => item !== value);
+    if (!filters[key]?.length) delete filters[key];
+  } else delete filters[key];
+  return { ...query, filters, page: 1 };
+}
 const arrays = new Set(["amenities", "preferred_amenities"]);
 const counts = new Set(["bedrooms", "bathrooms", "parking_spaces"]);
 const amounts = new Set(["min_price", "max_price", "min_area", "max_area"]);

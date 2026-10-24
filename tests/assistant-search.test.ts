@@ -1,7 +1,31 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assistantSearchParams, parseAssistantSearch } from "../src/lib/assistant-search";
+import { assistantSearchParams, parseAssistantSearch, removeAssistantFilter, type AssistantSearch } from "../src/lib/assistant-search";
 import { assistantInputSchema } from "../src/lib/assistant-contracts";
+import { assistantFilterPills } from "../src/lib/assistant-presentation";
+
+test("pills preservam false, zero e requisitos distintos de preferências", () => {
+  const pills = assistantFilterPills({ city: "Araucária", property_type: "house", min_price: 0, max_price: "3000.00", price_basis: "total_monthly", currency: "BRL", furnished: false, bedrooms: 0, amenities: ["pet_friendly"], preferred_amenities: ["gym"] });
+  assert.ok(pills.some(pill => pill.key === "furnished" && pill.label === "Sem mobília"));
+  assert.ok(pills.some(pill => pill.key === "bedrooms" && pill.label === "Mínimo de 0 quartos"));
+  assert.ok(pills.some(pill => pill.key === "min_price"));
+  assert.ok(pills.some(pill => pill.label === "Requisito: Aceita pets" && pill.value === "pet_friendly"));
+  assert.ok(pills.some(pill => pill.label === "Preferência: Academia" && pill.value === "gym"));
+  assert.equal(pills.find(pill => pill.key === "price_basis")?.removable, false);
+  assert.equal(pills.find(pill => pill.key === "currency")?.removable, false);
+});
+test("remover pill reseta paginação e preserva orçamento, demais critérios e exclusões", () => {
+  const query: AssistantSearch = { filters: { city: "Araucária", furnished: false, bedrooms: 0, max_price: "3000.00", price_basis: "total_monthly", amenities: ["balcony", "pet_friendly"], preferred_amenities: ["gym", "pet_friendly"] }, excludedIds: ["2"], page: 3, perPage: 20 };
+  const next = removeAssistantFilter(query, "preferred_amenities", "pet_friendly");
+  assert.deepEqual(next.filters.preferred_amenities, ["gym"]);
+  assert.deepEqual(next.filters.amenities, ["balcony", "pet_friendly"]);
+  assert.equal(next.page, 1); assert.equal(next.filters.furnished, false); assert.equal(next.filters.bedrooms, 0);
+  assert.equal(next.filters.price_basis, "total_monthly"); assert.equal(next.filters.max_price, "3000.00"); assert.deepEqual(next.excludedIds, ["2"]);
+  assert.deepEqual(query.filters.preferred_amenities, ["gym", "pet_friendly"]);
+  const withoutBudget = removeAssistantFilter(next, "max_price");
+  assert.equal(withoutBudget.filters.max_price, undefined); assert.equal(withoutBudget.filters.price_basis, "total_monthly");
+  assert.equal(removeAssistantFilter(next, "preferred_amenities", "gym").filters.preferred_amenities, undefined);
+});
 
 test("query exata preserva tipo, false, zero, base, preferências, exclusões e paginação", () => {
   const params = assistantSearchParams({ filters: { city: "Araucária", property_type: "house", bedrooms: 0, furnished: false, price_basis: "total_monthly", max_price: "3000.00", amenities: ["balcony"], preferred_amenities: ["pet_friendly"] }, excludedIds: ["3"], page: 2, perPage: 20 });
