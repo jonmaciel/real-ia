@@ -5,6 +5,9 @@ Frontend independente da ListingsPlatform, em português brasileiro. Next.js App
 Integrações posteriores do assistente: [busca e perguntas](docs/unified-assistant.md)
 e [gravação/anexo de áudio](docs/assistant-audio.md), com contratos, BFF e verificações.
 
+[Captação e acompanhamento de interessados](docs/interessados.md): formulário
+público com consentimento e área administrativa privada em `/admin/interessados`.
+
 ## Executar
 
 Node.js 22.13+ ou 24 e npm. As versões resolvidas estão no package-lock.json.

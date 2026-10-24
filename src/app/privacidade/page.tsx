@@ -28,6 +28,9 @@ export default function Privacy() {
         sua navegação entre imóveis. “Limpar conversa” remove esse histórico local.
         Cancelar um envio não garante que o processamento no servidor seja interrompido.
       </p>
+      <h2>Interesse em um imóvel</h2>
+      <p>O formulário “Tenho interesse” envia seu nome, os contatos escolhidos e a mensagem opcional à API da Morada apenas após revisão, confirmação e consentimento explícito. O consentimento vale para contato da Morada sobre aquele imóvel e não inclui marketing. A navegação, a conversa com a IA e os áudios não criam interessados automaticamente.</p>
+      <p>Os dados de contato e o acompanhamento são privados e acessíveis somente a administradores autorizados. Não são enviados à IA, ao catálogo público ou a analytics, nem persistidos no armazenamento do navegador. O registro não envia e-mail ou WhatsApp, não telefona, não confirma visita e não reserva o imóvel. Uma chave de idempotência evita duplicar a mesma solicitação em uma repetição manual.</p>
       <h2>Sua conta</h2>
       <p>
         As credenciais são encaminhadas à API independente da plataforma. A

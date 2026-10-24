@@ -8,6 +8,7 @@ import { assistantCatalog } from "./assistant-search-fixtures";
 import { createServer } from "node:http";
 import { categories, listings } from "../src/lib/fixtures";
 import { pricingListings, pricingSources } from "./pricing-fixtures";
+import { mockLeads } from "./mock-leads";
 const sessions = new Set<string>();
 let counter = 0;
 let assistantCounter = 0;
@@ -122,6 +123,7 @@ createServer(async (req, res) => {
   }
   const b = rawBody.length ? JSON.parse(rawBody.toString("utf8")) : {};
   const token = req.headers.authorization?.replace("Bearer ", "");
+  if (mockLeads(path, url, req.method, b, rawBody, token, sessions, adminTokens, res)) return;
   if (path === "/assistant/results") {
     try {
       const query = parseAssistantSearch(Object.fromEntries(url.searchParams));

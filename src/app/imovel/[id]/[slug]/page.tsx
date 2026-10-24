@@ -11,6 +11,7 @@ import {
   realEstateCategory,
   ApiError,
   errorMessage,
+  demo,
 } from "@/lib/api";
 import {
   availability,
@@ -28,6 +29,7 @@ import {
 } from "@/components/properties";
 import { PropertyFacts } from "@/components/property-facts";
 import { PropertyCosts } from "@/components/property-costs";
+import { PropertyInterest } from "@/components/property-interest";
 import { PropertyNeighborhood } from "@/components/property-neighborhood";
 import { publicCoordinates, publishedContact } from "@/lib/property-location";
 import { ShareButton } from "@/components/share";
@@ -135,7 +137,8 @@ export default async function Detail({ params }: Props) {
             {modality(p.listing_type)} · {p.currency ?? "Moeda não informada"}
           </p>
           <PropertyCosts property={p} />
-          <a className="button primary source-shortcut" href="#fontes">
+          <PropertyInterest listingId={String(p.id)} title={p.title} unavailable={p.availability === "unavailable"} disabled={demo} />
+          <a className="button secondary source-shortcut" href="#fontes">
             Consultar anúncios de origem <ArrowUpRight size={17} />
           </a>
           <details className="listing-dates"><summary>Datas deste anúncio</summary>

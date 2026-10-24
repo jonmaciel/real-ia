@@ -42,6 +42,7 @@ export default async function Account() {
       <h1>Olá, {profile.name}.</h1>
       <p>{profile.email}</p>
       {profile.role === "admin" && (
+        <div className="lead-contact-actions">
         <Link
           href="/admin/anuncios"
           prefetch={false}
@@ -49,6 +50,8 @@ export default async function Account() {
         >
           Revisar anúncios
         </Link>
+        <Link href="/admin/interessados" prefetch={false} className="button secondary">Acompanhar interessados</Link>
+        </div>
       )}
       <div className="account-grid">
         <section className="panel">

@@ -17,6 +17,8 @@ export default function AdminLayout({
         <Link href="/admin/anuncios" prefetch={false}>
           Revisão de anúncios
         </Link>
+        <span>/</span>
+        <Link href="/admin/interessados" prefetch={false}>Interessados</Link>
       </nav>
       {children}
     </section>

@@ -10,6 +10,7 @@ import "./globals.css";
 import "./portal.css";
 import "./neighborhood.css";
 import "./questions.css";
+import "./leads.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3001"),
   title: { default: "Morada — Encontre seu lugar", template: "%s | Morada" },
