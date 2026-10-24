@@ -32,7 +32,9 @@ const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
   real_estate: null,
   publication_review: {} as Record<string, unknown>,
   media:
-    id === 101
+    id === 104 || id === 204
+      ? [0, 1, 2, 3].map(index => ({ id: 400 + index, hosted_url: `https://ik.imagekit.io/test/review-preview-${index}.jpg`, is_cover: index === 2, position: index, processing_status: "completed", attribution: "Fonte sintética de teste" }))
+      : id === 101
       ? [
           {
             id: 1,

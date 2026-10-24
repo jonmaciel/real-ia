@@ -31,10 +31,11 @@ export const adminSourceSchema = z.object({
   extraction_metadata: z.record(z.string(), z.unknown()).nullish(),
   fingerprint: z.string().nullish(),
 });
+export const adminMediaSchema = z.object({ id, is_cover: z.boolean().optional(), position: z.number().int().nonnegative().optional(), hosted_url: z.string().nullish(), attribution: z.string().nullish(), processing_status: z.string() });
 export const adminDetailSchema = adminListingSchema.extend({
   real_estate: z.record(z.string(), z.unknown()).nullish(),
   sources: z.array(adminSourceSchema),
-  media: z.array(z.object({ id, is_cover: z.boolean().optional(), position: z.number().int().nonnegative().optional(), hosted_url: z.string().nullish(), attribution: z.string().nullish(), processing_status: z.string() })).optional(),
+  media: z.array(adminMediaSchema).optional(),
 });
 export type AdminListing = z.infer<typeof adminListingSchema>;
 export type AdminDetail = z.infer<typeof adminDetailSchema>;

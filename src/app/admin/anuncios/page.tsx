@@ -8,6 +8,7 @@ import {
 } from "@/lib/admin-contracts";
 import { modality, money, period, availability } from "@/lib/presentation";
 import { AdminState } from "@/components/admin-state";
+import { AdminListingPreviews, AdminPreviewProvider } from "@/components/admin-listing-previews";
 export default async function AdminQueue({
   searchParams,
 }: {
@@ -106,35 +107,38 @@ export default async function AdminQueue({
               </p>
             </div>
             {result.data.length ? (
-              <div className="admin-queue">
+              <AdminPreviewProvider><div className="admin-queue">
                 {result.data.map((p) => (
-                  <article key={p.id} className="panel">
-                    <div className="admin-item-heading">
-                      <h2>{p.title}</h2>
-                      <span className="status-badge">
-                        {statusLabel(p.status)}
-                      </span>
+                  <article key={p.id} className="panel admin-queue-item">
+                    <div>
+                      <div className="admin-item-heading">
+                        <h2>{p.title}</h2>
+                        <span className="status-badge">
+                          {statusLabel(p.status)}
+                        </span>
+                      </div>
+                      <p>
+                        {[p.neighborhood, p.city, p.region]
+                          .filter(Boolean)
+                          .join(" · ") || "Localização não informada"}
+                      </p>
+                      <p>
+                        {modality(p.listing_type)} · {money(p.price, p.currency)}
+                        {p.price != null ? period(p.price_type) : ""}
+                      </p>
+                      <p>{availability(p.availability)}</p>
+                      <Link
+                        href={`/admin/anuncios/${encodeURIComponent(p.id)}`}
+                        prefetch={false}
+                        className="button secondary"
+                      >
+                        Revisar<span className="sr-only"> {p.title}</span>
+                      </Link>
                     </div>
-                    <p>
-                      {[p.neighborhood, p.city, p.region]
-                        .filter(Boolean)
-                        .join(" · ") || "Localização não informada"}
-                    </p>
-                    <p>
-                      {modality(p.listing_type)} · {money(p.price, p.currency)}
-                      {p.price != null ? period(p.price_type) : ""}
-                    </p>
-                    <p>{availability(p.availability)}</p>
-                    <Link
-                      href={`/admin/anuncios/${encodeURIComponent(p.id)}`}
-                      prefetch={false}
-                      className="button secondary"
-                    >
-                      Revisar<span className="sr-only"> {p.title}</span>
-                    </Link>
+                    <AdminListingPreviews id={String(p.id)} title={p.title} />
                   </article>
                 ))}
-              </div>
+              </div></AdminPreviewProvider>
             ) : (
               <div className="state-box" role="status">
                 <h2>Nenhum anúncio nesta fila</h2>
