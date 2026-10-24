@@ -50,7 +50,7 @@ export function period(type: string | null | undefined) {
 export function modality(type: string) {
   return (
     ({ sale: "Venda", rental: "Aluguel" } as Record<string, string>)[type] ??
-    type
+    (type || "Finalidade não informada")
   );
 }
 export function slug(title: string) {

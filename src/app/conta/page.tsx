@@ -41,6 +41,7 @@ export default async function Account() {
       <span className="eyebrow">SEU ESPAÇO</span>
       <h1>Olá, {profile.name}.</h1>
       <p>{profile.email}</p>
+      <Link className="button primary" href="/anunciar">Anunciar imóvel</Link>
       {profile.role === "admin" && (
         <div className="lead-contact-actions">
         <Link

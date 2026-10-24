@@ -42,7 +42,7 @@ export function PropertyCosts({ property }: { property: CostProperty }) {
       : charges.length ? "O anunciante não informou um total. As cobranças mantêm suas periodicidades e não são somadas pelo Morada."
         : "Taxas adicionais e total não informados. O preço anunciado pode não incluir todas as despesas."}</p>
     {hasTotal && pricing.total_source !== "reported" && <p className="cost-note">A origem deste total não foi confirmada.</p>}
-    {!isRental && charges.length > 0 && <p className="cost-note">Condomínio e tributos são despesas separadas do preço de compra.</p>}
+    {property.listing_type === "sale" && charges.length > 0 && <p className="cost-note">Condomínio e tributos são despesas separadas do preço de compra.</p>}
     <p className="cost-note">Confirme preço e disponibilidade com o anunciante.</p>
   </section>;
 }

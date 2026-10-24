@@ -4,13 +4,13 @@ import { z } from "zod";
 import {
   categorySchema,
   listingSchema,
-  mediaSchema,
   searchSchema,
   sourceSchema,
 } from "./contracts";
 import { serialize, type Filters } from "./filters";
 import * as fixtures from "./fixtures";
 import { assistantResultsSchema, assistantSearchParams, type AssistantSearch } from "./assistant-search";
+import { collectMediaPages } from "./media-pages";
 export const demo = process.env.DEMO_MODE === "true";
 export class ApiError extends Error {
   constructor(
@@ -135,9 +135,7 @@ export async function getSources(id: string) {
 export async function getMedia(id: string) {
   return demo
     ? []
-    : z
-        .object({ data: z.array(mediaSchema) })
-        .parse(await request(`/listings/${encodeURIComponent(id)}/media`)).data;
+    : collectMediaPages(page => request(`/listings/${encodeURIComponent(id)}/media?page=${page}&per_page=200`));
 }
 export function errorMessage(e: unknown, context: "catalog" | "auth" = "catalog") {
   if (e instanceof ApiError && e.code === "email_unverified")

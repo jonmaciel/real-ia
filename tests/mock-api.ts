@@ -9,6 +9,8 @@ import { createServer } from "node:http";
 import { categories, listings } from "../src/lib/fixtures";
 import { pricingListings, pricingSources } from "./pricing-fixtures";
 import { mockLeads } from "./mock-leads";
+import { mockManual, manualPublished } from "./mock-manual";
+const unverifiedTokens = new Set<string>();
 const sessions = new Set<string>();
 let counter = 0;
 let assistantCounter = 0;
@@ -121,6 +123,8 @@ createServer(async (req, res) => {
       return send(200, { data: audio.name === "bad-response.wav" ? { ...result, transcription: undefined } : result });
     } catch { return send(400, { error: { code: "invalid_request" } }); }
   }
+  const manualToken = req.headers.authorization?.replace("Bearer ", "");
+  if (await mockManual(path, url, req, res, rawBody, manualToken, sessions, adminTokens, unverifiedTokens)) return;
   const b = rawBody.length ? JSON.parse(rawBody.toString("utf8")) : {};
   const token = req.headers.authorization?.replace("Bearer ", "");
   if (mockLeads(path, url, req.method, b, rawBody, token, sessions, adminTokens, res)) return;
@@ -224,7 +228,7 @@ createServer(async (req, res) => {
       return send(400, { error: { code: "invalid_request" } });
     const page = Number(url.searchParams.get("page") ?? 1);
     const per = Number(url.searchParams.get("per_page") ?? 20);
-    const data = [...listings, ...publishedRows()].filter(
+    const data = [...listings, ...publishedRows(), ...manualPublished()].filter(
       (p) =>
         (!city || p.city === city) &&
         (!url.searchParams.get("listing_type") ||
@@ -341,6 +345,7 @@ createServer(async (req, res) => {
       return send(401, { error: { code: "invalid_credentials" } });
     const token = `opaque-session-${++counter}`;
     sessions.add(token);
+    if (b.email === "unverified-intake@example.com") unverifiedTokens.add(token);
     if (b.email === "admin@example.com") adminTokens.add(token);
     return send(200, { data: { token, expires_in: 604800 } });
   }
@@ -434,7 +439,7 @@ createServer(async (req, res) => {
         name: b.name ?? "Ana",
         email: "ana@example.com",
         role: adminTokens.has(token) ? "admin" : "member",
-        verified_at: "2026-10-20",
+        verified_at: unverifiedTokens.has(token) ? null : "2026-10-20",
       },
     });
   }

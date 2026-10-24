@@ -8,6 +8,10 @@ e [gravação/anexo de áudio](docs/assistant-audio.md), com contratos, BFF e ve
 [Captação e acompanhamento de interessados](docs/interessados.md): formulário
 público com consentimento e área administrativa privada em `/admin/interessados`.
 
+[Cadastro manual de imóveis](docs/manual-listings.md): `/anunciar`, texto/áudio/fotos,
+retomada privada, revisão e correção administrativa antes da publicação. Inclui
+limites de upload da Vercel e instruções para suportar integralmente fotos de 5 MiB.
+
 ## Executar
 
 Node.js 22.13+ ou 24 e npm. As versões resolvidas estão no package-lock.json.

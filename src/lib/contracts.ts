@@ -2,6 +2,8 @@ import { z } from "zod";
 export const id = z.union([z.number().int().positive(), z.string().min(1)]);
 const optional = z.string().nullish();
 const decimalAmount = z.string().max(100).regex(/^\d+(\.\d+)?$/);
+export const publicAddressSchema = z.object({ street: optional, number: optional, complement: optional, postal_code: optional, city: optional, neighborhood: optional, region: optional, country: optional });
+export const publicContactSchema = z.object({ agency_name: optional, creci: optional, phone: optional, mobile: optional, email: optional, website: optional, whatsapp_url: optional });
 export const pricingSchema = z.object({
   base_amount: decimalAmount.nullish(),
   gross_amount: decimalAmount.nullish(),
@@ -23,6 +25,7 @@ export const listingSchema = z.object({
   category_id: id,
   title: z.string(),
   description: optional,
+  address: publicAddressSchema.nullish(),
   cover_url: optional,
   listing_type: z.string(),
   price: z
@@ -75,7 +78,9 @@ export const searchSchema = z.object({
 });
 export const sourceSchema = z.object({
   id,
-  original_url: z.string(),
+  original_url: z.string().nullish(),
+  contact: publicContactSchema.nullish(),
+  address: publicAddressSchema.nullish(),
   price: z.string().nullish(),
   currency: optional,
   price_type: optional,

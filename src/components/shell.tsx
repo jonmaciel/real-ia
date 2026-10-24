@@ -13,6 +13,7 @@ export function SiteHeader() {
       <nav className="desktop-nav" aria-label="Principal">
         <Link href="/buscar?listing_type=sale">Comprar</Link>
         <Link href="/buscar?listing_type=rental">Alugar</Link>
+        <Link href="/anunciar">Anunciar imóvel</Link>
         <Link href="/#como-funciona">Como funciona</Link>
       </nav>
       <Link className="account-link" href="/conta">

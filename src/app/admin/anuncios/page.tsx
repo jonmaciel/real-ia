@@ -51,6 +51,7 @@ export default async function AdminQueue({
         a disponibilidade do imóvel.
       </p>
       <form className="panel admin-filters" action="/admin/anuncios">
+        <label><span>Origem do cadastro</span><select name="creation_method" defaultValue={filters.creation_method ?? ""}><option value="">Todas</option><option value="manual_ai">Manual</option><option value="ingestion">Coleta</option></select></label>
         <label>
           <span>Status</span>
           <select name="status" defaultValue={filters.status}>
@@ -113,6 +114,7 @@ export default async function AdminQueue({
                     <div>
                       <div className="admin-item-heading">
                         <h2>{p.title}</h2>
+                        {(p.is_manual || p.creation_method === "manual_ai") && <span className="status-badge">Manual</span>}
                         <span className="status-badge">
                           {statusLabel(p.status)}
                         </span>

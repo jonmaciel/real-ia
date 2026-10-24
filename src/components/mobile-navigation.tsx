@@ -32,6 +32,7 @@ export function MobileNavigation() {
       }}>
         <Link href="/buscar?listing_type=sale">Comprar</Link>
         <Link href="/buscar?listing_type=rental">Alugar</Link>
+        <Link href="/anunciar">Anunciar imóvel</Link>
         <Link href="/#como-funciona">Como funciona</Link>
         <Link href="/conta">Minha conta</Link>
       </nav>

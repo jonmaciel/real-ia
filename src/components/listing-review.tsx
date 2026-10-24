@@ -1,7 +1,10 @@
 "use client";
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { PhotoGallery } from "./photo-gallery";
+import { ManualReviewPhotos } from "./manual-review-photos";
+import { ManualReviewEditor } from "./manual-review-editor";
+import { ManualMissing } from "./manual-result";
+import { manualError } from "@/lib/manual-contracts";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { z } from "zod";
@@ -30,6 +33,7 @@ export function ListingReview({
   initialListing: AdminDetail;
 }) {
   const [listing, setListing] = useState(initialListing);
+  const [detailRevision, setDetailRevision] = useState(0);
   const [selected, setSelected] = useState(
     initialListing.sources.length === 1
       ? String(initialListing.sources[0].id)
@@ -37,6 +41,8 @@ export function ListingReview({
   );
   const [reviewed, setReviewed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [reason, setReason] = useState("");
   const [mustReload, setMustReload] = useState(false);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
@@ -46,6 +52,7 @@ export function ListingReview({
   const source = listing.sources.find((s) => String(s.id) === selected);
   const canApprove =
     ["draft", "published"].includes(listing.status) &&
+    !dirty && !(listing.missing_fields?.length) &&
     source &&
     ["active", "unverified"].includes(source.lifecycle) &&
     !!source.fingerprint;
@@ -76,6 +83,8 @@ export function ListingReview({
         .object({ data: adminDetailSchema })
         .parse(await response.json()).data;
       setListing(latest);
+      setDetailRevision(previous => previous + 1);
+      setDirty(false);
       setMustReload(false);
       return true;
     } catch (e) {
@@ -165,6 +174,19 @@ export function ListingReview({
       locked.current = false;
     }
   }
+  async function decision(action: "reject" | "reopen") {
+    if (locked.current || busy || mustReload || dirty || !reviewed || !source?.fingerprint || (action === "reject" && !reason.trim())) return;
+    locked.current = true; setBusy(true); setMessage(""); setReviewed(false);
+    try {
+      const response = await fetch(`/api/admin/anuncios/${listing.id}/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_listing_id: String(source.id), fingerprint: source.fingerprint, ...(action === "reject" ? { reason: reason.trim() } : {}) }), signal: AbortSignal.timeout(25000) });
+      const body = await response.json();
+      sessionError(response.status);
+      const refreshed = await loadLatest();
+      if (refreshed) { setFailed(!response.ok); setMessage(response.ok ? action === "reject" ? "Anúncio rejeitado e retirado da busca pública." : "Anúncio reaberto como rascunho. Revise antes de publicar." : manualError(response.status, body.code)); }
+      router.refresh();
+    } catch { setMustReload(true); setFailed(true); setMessage("Não foi possível confirmar a decisão. Atualize o detalhe antes de tentar novamente."); }
+    finally { locked.current = false; setBusy(false); }
+  }
   return (
     <>
       <span className="eyebrow">REVISÃO INDIVIDUAL</span>
@@ -177,12 +199,12 @@ export function ListingReview({
               .join(" · ") || "Localização não informada"}
           </p>
         </div>
-        <span className="status-badge">{statusLabel(listing.status)}</span>
+        <div>{(listing.is_manual || listing.creation_method === "manual_ai") && <span className="status-badge">Manual</span>} <span className="status-badge">{statusLabel(listing.status)}</span></div>
       </div>
       <div className="detail-grid admin-review">
         <div>
           <section className="panel">
-            <PhotoGallery photos={listing.media ?? []} title={listing.title} />
+            <ManualReviewPhotos key={`${listing.id}-${listing.updated_at}-${detailRevision}`} listing={listing} />
             <h2>Dados do anúncio</h2>
             <p>{modality(listing.listing_type)}</p>
             <PropertyPrice property={listing} />
@@ -205,9 +227,13 @@ export function ListingReview({
             {date(listing.published_at) && (
               <p>Publicado em {date(listing.published_at)}</p>
             )}
-            <h3>Última aprovação editorial</h3>
+            <h3>Última decisão editorial</h3>
             <ReviewData data={listing.publication_review} />
           </section>
+          {listing.manual_intake && <>
+            <section className="panel"><h2>Entrada original do cadastro manual</h2><p className="description">{listing.manual_intake.prompt || "Sem texto enviado."}</p><h3>Transcrição</h3><p className="description">{listing.manual_intake.transcript || "Sem áudio enviado."}</p><details><summary>Extração estruturada para conferência</summary><ReviewData data={listing.manual_intake.extraction} /></details></section>
+            <ManualReviewEditor key={`${listing.sources.map(s => s.fingerprint).join()}-${listing.status}-${detailRevision}`} listing={listing} disabled={busy || mustReload} onDirty={value => { setDirty(value); setReviewed(false); }} onSaving={value => { locked.current = value; setBusy(value); }} onSaved={async text => { setReviewed(false); if (await loadLatest()) { setFailed(false); setMessage(text); } }} />
+          </>}
           <section className="detail-section">
             <h2>Anúncio de origem em revisão</h2>
             <label>
@@ -277,6 +303,8 @@ export function ListingReview({
         </div>
         <aside className="panel price-panel">
           <h2>Publicação</h2>
+          <ManualMissing fields={listing.missing_fields ?? []} />
+          {dirty && <p role="status">Há correções não salvas. Salve e revise a nova versão antes de decidir.</p>}
           <p>
             “Aprovar e publicar” torna este anúncio público imediatamente.
             Confira o conteúdo e a origem selecionada.
@@ -289,7 +317,7 @@ export function ListingReview({
             <input
               type="checkbox"
               checked={reviewed}
-              disabled={busy || mustReload || !canApprove}
+              disabled={busy || mustReload || dirty || !source?.fingerprint}
               onChange={(e) => setReviewed(e.target.checked)}
             />
             Revisei os dados e o anúncio de origem selecionado.
@@ -307,6 +335,8 @@ export function ListingReview({
           >
             {busy ? "Aguarde…" : "Aprovar e publicar"}
           </button>
+          {["draft", "published"].includes(listing.status) && <div className="manual-rejection"><label><span>Motivo da rejeição</span><textarea maxLength={500} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label><p>Rejeitar retira o anúncio da busca pública.</p><button className="button secondary" disabled={busy || mustReload || dirty || !reviewed || !source?.fingerprint || !reason.trim()} onClick={() => void decision("reject")}>Rejeitar anúncio</button></div>}
+          {listing.status === "rejected" && <button className="button secondary" disabled={busy || mustReload || dirty || !reviewed || !source?.fingerprint} onClick={() => void decision("reopen")}>Reabrir para revisão</button>}
           <button className="button secondary" disabled={busy} onClick={reload}>
             Atualizar detalhe
           </button>

@@ -33,6 +33,7 @@ import { PropertyInterest } from "@/components/property-interest";
 import { PropertyNeighborhood } from "@/components/property-neighborhood";
 import { publicCoordinates, publishedContact } from "@/lib/property-location";
 import { ShareButton } from "@/components/share";
+import { SourceContact } from "@/components/source-contact";
 type Props = { params: Promise<{ id: string; slug: string }> };
 export async function generateMetadata({ params }: Props) {
   try {
@@ -183,7 +184,7 @@ export default async function Detail({ params }: Props) {
               <h3>Contato e endereço</h3>
               {contact.phone && contact.telephone ? (
                 <p>Telefone informado na descrição: <a className="text-link" href={contact.telephone}>{contact.phone}</a></p>
-              ) : <p>Telefone de contato não informado. Consulte o anunciante pelo anúncio original.</p>}
+              ) : <p>Consulte os contatos informados nas origens abaixo.</p>}
               {contact.address ? <p>Endereço informado na descrição: <strong>{contact.address}</strong></p> : <p>Endereço completo não informado. Confirme com o anunciante antes de visitar.</p>}
               <small>Informações da descrição pública, sem verificação independente pelo Morada.</small>
             </div>
@@ -206,6 +207,7 @@ export default async function Detail({ params }: Props) {
                         {date(s.last_observed_at) && (
                           <small>Observado em {date(s.last_observed_at)}</small>
                         )}
+                        <SourceContact source={s} />
                       </div>
                       {url && (
                         <a

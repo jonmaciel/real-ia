@@ -31,6 +31,9 @@ export default function Privacy() {
       <h2>Interesse em um imóvel</h2>
       <p>O formulário “Tenho interesse” envia seu nome, os contatos escolhidos e a mensagem opcional à API da Morada apenas após revisão, confirmação e consentimento explícito. O consentimento vale para contato da Morada sobre aquele imóvel e não inclui marketing. A navegação, a conversa com a IA e os áudios não criam interessados automaticamente.</p>
       <p>Os dados de contato e o acompanhamento são privados e acessíveis somente a administradores autorizados. Não são enviados à IA, ao catálogo público ou a analytics, nem persistidos no armazenamento do navegador. O registro não envia e-mail ou WhatsApp, não telefona, não confirma visita e não reserva o imóvel. Uma chave de idempotência evita duplicar a mesma solicitação em uma repetição manual.</p>
+      <h2>Anunciar um imóvel</h2>
+      <p>Ao organizar um anúncio, texto, áudio e fotos são enviados à API para extração dos dados. O áudio é transcrito pelo provedor de IA; as fotos são armazenadas no ImageKit e analisadas pela IA. O cadastro, a entrada original e a transcrição são privados para sua conta e para administradores durante a revisão. Eles permanecem no servidor para permitir a retomada; não seguem o histórico temporário da conversa.</p>
+      <p>O anúncio só aparece no catálogo após aprovação humana. Envie fotos e dados de contato e endereço que você tem autorização para publicar. A remoção de uma foto do cadastro não garante sua exclusão física imediata no armazenamento. Não enviamos esses dados para analytics.</p>
       <h2>Sua conta</h2>
       <p>
         As credenciais são encaminhadas à API independente da plataforma. A

@@ -4,9 +4,9 @@ import { Mic, Paperclip, Square, X } from "lucide-react";
 import { AUDIO_ACCEPT, MAX_AUDIO_BYTES, MAX_RECORDING_MS, audioErrorMessage, audioFileError } from "@/lib/assistant-audio";
 import { flags } from "@/lib/presentation";
 type Stage = "idle" | "permission" | "recording" | "finishing" | "ready" | "sending";
-type Props = { disabled: boolean; active?: boolean; onActiveChange: (active: boolean) => void; onSend: (audio: File) => Promise<boolean> };
+type Props = { disabled: boolean; active?: boolean; sendLabel?: string; onActiveChange: (active: boolean) => void; onSend: (audio: File) => Promise<boolean> };
 export function AssistantAudio(props: Props) { return flags.voiceSearch && props.active !== false ? <AudioControls {...props} /> : null; }
-function AudioControls({ disabled, onActiveChange, onSend }: Props) {
+function AudioControls({ disabled, onActiveChange, onSend, sendLabel = "Enviar áudio" }: Props) {
   const [stage, setStage] = useState<Stage>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
@@ -109,7 +109,7 @@ function AudioControls({ disabled, onActiveChange, onSend }: Props) {
       <div className="assistant-audio-actions">
         {stage === "recording" && <button type="button" onClick={() => { setStage("finishing"); release(); }}><Square size={16} aria-hidden="true" />Parar gravação</button>}
         {stage !== "sending" && <button type="button" onClick={discard}><X size={16} aria-hidden="true" />{stage === "ready" ? "Descartar áudio" : "Cancelar gravação"}</button>}
-        {(stage === "ready" || stage === "sending") && <button type="button" className="button primary" disabled={disabled || stage === "sending"} onClick={() => void send()}>{stage === "sending" ? "Enviando áudio…" : "Enviar áudio"}</button>}
+        {(stage === "ready" || stage === "sending") && <button type="button" className="button primary" disabled={disabled || stage === "sending"} onClick={() => void send()}>{stage === "sending" ? "Preparando áudio…" : sendLabel}</button>}
       </div>
     </div>}
     {error && <p className="assistant-audio-error" role="alert">{error}</p>}

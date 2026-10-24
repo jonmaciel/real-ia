@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { id, listingSchema, pricingSchema } from "./contracts";
-export const statuses = ["draft", "published", "expired", "removed"] as const;
+export const statuses = ["draft", "published", "expired", "removed", "rejected"] as const;
 export const reviewSchema = z
   .object({
     approved_by_id: id.optional(),
@@ -11,6 +11,9 @@ export const reviewSchema = z
   .passthrough()
   .nullish();
 export const adminListingSchema = listingSchema.extend({
+  listing_type: z.string().nullish().transform(value => value ?? ""),
+  is_manual: z.boolean().optional(),
+  creation_method: z.string().optional(),
   status: z.enum(statuses),
   publication_review: reviewSchema,
 });
@@ -18,7 +21,7 @@ export const adminSourceSchema = z.object({
   id,
   source_id: id,
   source_name: z.string(),
-  original_url: z.string(),
+  original_url: z.string().nullish(),
   lifecycle: z.string(),
   price: z
     .string()
@@ -37,6 +40,9 @@ export const adminDetailSchema = adminListingSchema.extend({
   real_estate: z.record(z.string(), z.unknown()).nullish(),
   sources: z.array(adminSourceSchema),
   media: z.array(adminMediaSchema).optional(),
+  media_has_more: z.boolean().optional(),
+  missing_fields: z.array(z.string()).optional(),
+  manual_intake: z.object({ public_id: z.string().uuid(), status: z.enum(["collecting", "processing", "ready"]), prompt: z.string(), transcript: z.string().nullish(), extraction: z.record(z.string(), z.unknown()) }).nullish(),
 });
 export type AdminListing = z.infer<typeof adminListingSchema>;
 export type AdminDetail = z.infer<typeof adminDetailSchema>;
@@ -50,6 +56,7 @@ export const adminSearchSchema = z.object({
 });
 export const adminFiltersSchema = z.object({
   status: z.enum(statuses).default("draft"),
+  creation_method: z.enum(["ingestion", "manual_ai"]).optional(),
   city: z.string().max(120).optional(),
   source_id: z
     .string()
@@ -91,6 +98,7 @@ export function statusLabel(status: string) {
         published: "Publicado",
         expired: "Expirado",
         removed: "Removido",
+        rejected: "Rejeitado",
       } as Record<string, string>
     )[status] ?? status
   );
@@ -111,6 +119,7 @@ export function lifecycleLabel(value: string) {
 }
 
 export function adminError(status: number, code?: string) {
+  if (code === "manual_listing_incomplete") return "Complete os campos pendentes antes de aprovar este anúncio manual.";
   if (code === "review_outdated")
     return "Os dados mudaram desde a revisão. Revise a versão atualizada antes de aprovar novamente.";
   if (code === "listing_not_approvable")

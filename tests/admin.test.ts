@@ -21,7 +21,7 @@ test("fila administrativa envia apenas filtros confirmados e preserva cidade", (
   assert.equal(f.status, "draft");
   assert.equal(f.city, "São José dos Pinhais");
   for (const bad of [
-    { status: "rejected" },
+    { status: "invalid" },
     { page: "1001" },
     { per_page: "101" },
     { source_id: "-1" },

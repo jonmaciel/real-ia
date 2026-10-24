@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminDetail, adminError } from "@/lib/admin-api";
 import { ApiError } from "@/lib/api";
+import { adminWrite } from "@/lib/admin-write";
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) { return adminWrite(req, (await params).id, "update"); }
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
