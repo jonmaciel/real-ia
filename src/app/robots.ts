@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/seo";
 export default function robots(): MetadataRoute.Robots {
   return {
     rules:
@@ -7,8 +8,8 @@ export default function robots(): MetadataRoute.Robots {
         : {
             userAgent: "*",
             allow: "/",
-            disallow: ["/admin", "/conta", "/auth/", "/api/", "/buscar", "/anunciar"],
+            disallow: ["/admin", "/conta", "/auth/", "/api/", "/anunciar"],
           },
-    sitemap: `${process.env.APP_URL ?? "http://localhost:3001"}/sitemap.xml`,
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }

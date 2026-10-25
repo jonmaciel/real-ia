@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
 import { ConventionalSearchBar } from "@/components/search-form";
 import { SearchAssistant } from "@/components/search-assistant";
 import { PropertyGrid, ErrorState, EmptyState } from "@/components/properties";
@@ -6,7 +7,7 @@ import { search, assistantSearch, realEstateCategory, errorMessage } from "@/lib
 import { parseFilters, serialize, type Filters } from "@/lib/filters";
 import { assistantSearchParams, exactFiltersSchema, parseAssistantSearch, type AssistantSearch } from "@/lib/assistant-search";
 import { AppliedFilterPills } from "@/components/applied-filter-pills";
-export const metadata = { title: "Explorar imóveis", robots: { index: false, follow: true } };
+export const metadata = { ...pageMetadata("Buscar imóveis para comprar e alugar", "Encontre seu próximo imóvel com ajuda da IA ou use os filtros de cidade, bairro, preço e características na Morada.", "/buscar"), robots: { index: false, follow: true } };
 export default async function Results({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const raw = await searchParams;
   const exact = raw.assistant === "1";

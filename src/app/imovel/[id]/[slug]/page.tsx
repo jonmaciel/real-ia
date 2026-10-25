@@ -1,3 +1,4 @@
+import { absoluteUrl, listingMetadata, listingShareData } from "@/lib/seo";
 import { ListingConversationSelection } from "@/components/assistant-provider";
 import { PropertyGallery } from "@/components/property-gallery";
 import { prepareGallery } from "@/lib/gallery";
@@ -38,16 +39,7 @@ type Props = { params: Promise<{ id: string; slug: string }> };
 export async function generateMetadata({ params }: Props) {
   try {
     const p = await getListing((await params).id);
-    return {
-      title: p.title,
-      description: p.description?.slice(0, 160),
-      alternates: { canonical: propertyHref(p) },
-      openGraph: {
-        title: p.title,
-        description: p.description?.slice(0, 160),
-        url: propertyHref(p),
-      },
-    };
+    return listingMetadata(p);
   } catch {
     return { title: "Imóvel indisponível", robots: { index: false } };
   }
@@ -117,7 +109,7 @@ export default async function Detail({ params }: Props) {
               "Localização não informada"}
           </p>
         </div>
-        <ShareButton />
+        <ShareButton title={p.title} text={listingShareData(p).description} url={absoluteUrl(propertyHref(p))} />
       </div>
       <div className="detail-highlights">
         <PropertyFeatures property={p} category={category.status === "fulfilled" ? category.value : undefined} />

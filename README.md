@@ -106,3 +106,7 @@ O detalhe usa carrossel Embla, álbum em mosaico na ação **Ver todas** e ampli
 A direção visual atual, baseada na referência Imovelweb, e o prompt da imagem de ambientação estão em [docs/portal-design.md](docs/portal-design.md). A direção editorial anterior foi substituída.
 
 Mapas gratuitos, contatos, limites e configuração opcional do Overpass: [docs/maps-and-contact.md](docs/maps-and-contact.md).
+
+## Compartilhamento e identidade
+
+Prévias próprias por imóvel com capa real, preço e localização, Open Graph/Twitter Cards, ícones de navegador e celular e URLs canônicas: [metadados e operação](docs/sharing-metadata.md). Para regenerar os ícones: `npm run icons:generate`.

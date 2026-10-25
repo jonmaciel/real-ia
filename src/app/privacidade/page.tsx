@@ -1,7 +1,5 @@
-export const metadata = {
-  title: "Privacidade",
-  alternates: { canonical: "/privacidade" },
-};
+import { pageMetadata } from "@/lib/seo";
+export const metadata = pageMetadata("Privacidade", "Saiba como a Morada trata seus dados, sua conta e suas conversas ao buscar imóveis.", "/privacidade");
 export default function Privacy() {
   return (
     <article className="section prose">
