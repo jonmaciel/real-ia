@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AutomaticReviewBadge, automaticReviewReason } from "@/components/automatic-review";
 import { adminSearch, requireAdmin } from "@/lib/admin-api";
 import {
   parseAdminFilters,
@@ -114,6 +115,7 @@ export default async function AdminQueue({
                     <div>
                       <div className="admin-item-heading">
                         <h2>{p.title}</h2>
+                        <AutomaticReviewBadge review={p.automatic_review} />
                         {(p.is_manual || p.creation_method === "manual_ai") && <span className="status-badge">Manual</span>}
                         <span className="status-badge">
                           {statusLabel(p.status)}
@@ -129,6 +131,7 @@ export default async function AdminQueue({
                         {p.price != null ? period(p.price_type) : ""}
                       </p>
                       <p>{availability(p.availability)}</p>
+                      {p.automatic_review?.reason && <p>Última análise automática: {automaticReviewReason(p.automatic_review)}</p>}
                       <Link
                         href={`/admin/anuncios/${encodeURIComponent(p.id)}`}
                         prefetch={false}

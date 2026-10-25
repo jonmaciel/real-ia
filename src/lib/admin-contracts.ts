@@ -10,12 +10,24 @@ export const reviewSchema = z
   })
   .passthrough()
   .nullish();
+export const automaticReviewSchema = z.object({
+  status: z.enum(["not_reviewed", "not_applicable", "approved", "rejected", "needs_review", "error", "stale"]),
+  label: z.string(), reviewed: z.boolean(), ai_evaluated: z.boolean(), applied: z.boolean(),
+  reason: z.string().nullish(), missing_fields: z.array(z.string()), missing_field_labels: z.array(z.string()),
+  review_id: id.optional(), reviewer: z.enum(["ai", "rules"]).optional(),
+  confidence: z.number().min(0).max(1).nullish(), model: z.string().nullish(),
+  model_decision: z.enum(["approve", "reject", "needs_review"]).nullish(),
+  evaluation_mode: z.enum(["apply", "preview"]).optional(), reviewed_at: z.string().optional(),
+  policy_version: z.string().optional(), policy_current: z.boolean().optional(),
+});
+export type AutomaticReview = z.infer<typeof automaticReviewSchema>;
 export const adminListingSchema = listingSchema.extend({
   listing_type: z.string().nullish().transform(value => value ?? ""),
   is_manual: z.boolean().optional(),
   creation_method: z.string().optional(),
   status: z.enum(statuses),
   publication_review: reviewSchema,
+  automatic_review: automaticReviewSchema.optional(),
 });
 export const adminSourceSchema = z.object({
   id,
@@ -37,6 +49,7 @@ export const adminSourceSchema = z.object({
 });
 export const adminMediaSchema = z.object({ id, is_cover: z.boolean().optional(), position: z.number().int().nonnegative().optional(), hosted_url: z.string().nullish(), attribution: z.string().nullish(), processing_status: z.string() });
 export const adminDetailSchema = adminListingSchema.extend({
+  review_history: z.array(automaticReviewSchema).max(10).optional(),
   real_estate: z.record(z.string(), z.unknown()).nullish(),
   sources: z.array(adminSourceSchema),
   media: z.array(adminMediaSchema).optional(),
@@ -119,6 +132,10 @@ export function lifecycleLabel(value: string) {
 }
 
 export function adminError(status: number, code?: string) {
+  if (code === "auto_review_budget_exhausted") return "O limite diário de análises foi atingido. Aguarde a próxima janela.";
+  if (code === "review_in_progress") return "Este anúncio já está em análise. Atualize o detalhe em instantes.";
+  if (code === "listing_not_reviewable") return "Este status não permite revisão automática. Rejeitados precisam ser reabertos; publicados permitem apenas simulação.";
+  if (code === "auto_review_failed") return "A revisão automática falhou. Consulte o histórico e tente novamente.";
   if (code === "manual_listing_incomplete") return "Complete os campos pendentes antes de aprovar este anúncio manual.";
   if (code === "review_outdated")
     return "Os dados mudaram desde a revisão. Revise a versão atualizada antes de aprovar novamente.";

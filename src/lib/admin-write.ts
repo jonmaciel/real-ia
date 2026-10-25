@@ -10,12 +10,12 @@ import { realEstateCategory } from "./api";
 export async function adminWrite(req: Request, id: string, action: string) {
   try {
     manualOrigin(req);
-    if (!/^[1-9]\d{0,18}$/.test(id) || !["approve", "reject", "reopen", "update"].includes(action)) throw new ManualApiError(404, "not_found");
+    if (!/^[1-9]\d{0,18}$/.test(id) || !["approve", "reject", "reopen", "update", "auto-review"].includes(action)) throw new ManualApiError(404, "not_found");
     const token = await manualToken();
-    const schema = action === "update" ? z.object({ fingerprint: z.string().min(1).max(4096), fields: candidateSchema.partial() }).strict() : action === "reject" ? approvalSchema.extend({ reason: z.string().trim().min(1).max(500) }).strict() : approvalSchema;
+    const schema = action === "auto-review" ? approvalSchema.extend({ mode: z.enum(["apply", "preview"]) }).strict() : action === "update" ? z.object({ fingerprint: z.string().min(1).max(4096), fields: candidateSchema.partial() }).strict() : action === "reject" ? approvalSchema.extend({ reason: z.string().trim().min(1).max(500) }).strict() : approvalSchema;
     const input = await manualJson<unknown>(req, schema);
     // The protected admin endpoint enforces role on every write, without profile polling.
-    const result = await manualRequest(`/admin/listings/${id}${action === "update" ? "" : `/${action}`}`, z.object({ data: adminListingSchema }), { method: action === "update" ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal: AbortSignal.timeout(20000) }, token, () => {
+    const result = await manualRequest(`/admin/listings/${id}${action === "update" ? "" : `/${action}`}`, z.object({ data: adminListingSchema }), { method: action === "update" ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal: AbortSignal.timeout(action === "auto-review" ? 35000 : 20000) }, token, () => {
       // Publication can succeed even if the returned payload fails validation.
       revalidateTag("listings-public", { expire: 0 });
       for (const path of ["/", "/buscar", "/admin/anuncios", `/admin/anuncios/${id}`]) revalidatePath(path);

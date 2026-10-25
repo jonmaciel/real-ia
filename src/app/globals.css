@@ -2202,3 +2202,11 @@ textarea {
   .manual-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .manual-submit .button { width: 100%; white-space: normal; }
 }
+
+.automatic-review { margin-bottom: 24px; overflow-wrap: anywhere; }
+.automatic-review p { margin: 12px 0; }
+.automatic-review ol { padding-left: 20px; }
+.automatic-review li { margin-top: 16px; }
+.automatic-review-badge { white-space: normal; }
+.automatic-review-badge[data-outcome="rejected"], .automatic-review-badge[data-outcome="error"] { background: #fff0eb; color: #8b2e1d; }
+.automatic-review-badge[data-outcome="needs_review"] { background: #fff6df; color: #725219; }

@@ -17,7 +17,7 @@ let assistantCounter = 0;
 const assistantSessions = new Map<string, { seen: number[]; filters: Record<string, unknown> }>();
 let audioObservation: Record<string, unknown> | null = null;
 const adminTokens = new Set<string>();
-const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
+const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204, 105, 106, 107, 205, 206, 207].map((id) => ({
   id,
   category_id: 1,
   title: `Imóvel coletado ${id}`,
@@ -26,7 +26,7 @@ const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
   region: "PR",
   country: "BR",
   listing_type: "sale",
-  status: "draft",
+  status: [105, 205].includes(id) ? "published" : [107, 207].includes(id) ? "rejected" : "draft",
   price: null,
   currency: "BRL",
   price_type: "fixed",
@@ -34,7 +34,9 @@ const reviewRows = [101, 102, 103, 104, 201, 202, 203, 204].map((id) => ({
   description: null,
   structured_attributes: { reported_area_sqm: 82.5 },
   real_estate: null,
-  publication_review: {} as Record<string, unknown>,
+  publication_review: ([105, 205].includes(id) ? { approved_by_id: 1, approved_at: "2026-10-25T12:19:31Z", fingerprint: "v1", source_listing_id: id * 10 + 1 } : {}) as Record<string, unknown>,
+  automatic_review: ([105, 205, 107, 207].includes(id) ? { review_id: id + 1000, status: [107, 207].includes(id) ? "rejected" : "needs_review", label: [107, 207].includes(id) ? "Rejeitado por IA" : "Pendente após análise da IA", reviewed: true, ai_evaluated: true, applied: [107, 207].includes(id), reviewer: "ai", reason: [107, 207].includes(id) ? "Conteúdo explicitamente fictício." : "Anúncio coerente; a análise anterior apontou descrição ausente.", missing_fields: [107, 207].includes(id) ? [] : ["description"], missing_field_labels: [107, 207].includes(id) ? [] : ["Descrição (opcional)"], confidence: 0.93, model: "gpt-6-luna", model_decision: null, evaluation_mode: "apply", reviewed_at: "2026-10-25T07:12:06Z", policy_version: "2026-10-23-v1", policy_current: false } : undefined) as Record<string, unknown> | undefined,
+  review_history: [] as Record<string, unknown>[],
   media:
     id === 104 || id === 204
       ? [0, 1, 2, 3].map(index => ({ id: 400 + index, hosted_url: `https://ik.imagekit.io/test/review-preview-${index}.jpg`, is_cover: index === 2, position: index, processing_status: "completed", attribution: "Fonte sintética de teste" }))
@@ -354,7 +356,7 @@ createServer(async (req, res) => {
   if (path.startsWith("/admin/listings")) {
     if (!adminTokens.has(token))
       return send(403, { error: { code: "forbidden" } });
-    const m = path.match(/^\/admin\/listings\/(\d+)(?:\/(approve))?$/);
+    const m = path.match(/^\/admin\/listings\/(\d+)(?:\/(approve|auto-review))?$/);
     if (m) {
       const row = reviewRows.find((p) => String(p.id) === m[1]);
       if (!row) return send(404, { error: { code: "not_found" } });
@@ -376,6 +378,17 @@ createServer(async (req, res) => {
         }
         if (source.fingerprint !== b.fingerprint)
           return send(409, { error: { code: "review_outdated" } });
+        if (m[2] === "auto-review") {
+          if (!["apply", "preview"].includes(String(b.mode))) return send(400, { error: { code: "invalid_request" } });
+          const preview = b.mode === "preview";
+          if (row.status !== "draft" && !(preview && row.status === "published")) return send(422, { error: { code: "listing_not_reviewable" } });
+          const review = { review_id: row.id + 2000, status: "approved", label: preview ? "Simulação: Aprovado por IA" : "Aprovado por IA", reviewed: true, ai_evaluated: true, applied: !preview, reviewer: "ai", reason: "Dados mínimos atendidos. Descrição é opcional.", missing_fields: [], missing_field_labels: [], confidence: 0.98, model: "gpt-6-luna", model_decision: "approve", evaluation_mode: preview ? "preview" : "apply", reviewed_at: "2026-10-25T13:00:00Z", policy_version: "2026-10-25-v2", policy_current: true };
+          const previous = row.review_history.length ? row.review_history : row.automatic_review ? [row.automatic_review] : [];
+          row.review_history = [review, ...previous].slice(0, 10);
+          row.automatic_review = review;
+          if (!preview) { row.status = "published"; row.publication_review = { reviewer: "ai", decision: "approved", review_id: review.review_id, reason: review.reason, fingerprint: source.fingerprint, source_listing_id: source.id }; }
+          return send(200, { data: row });
+        }
         if (row.id === 103 || row.id === 203) {
           row.status = "expired";
           source.lifecycle = "expired";

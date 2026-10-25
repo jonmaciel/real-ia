@@ -27,6 +27,7 @@ import {
 import { PropertyFeatures, PropertyPrice } from "./properties";
 import { PropertyCosts } from "./property-costs";
 import { ReviewData } from "./review-data";
+import { AutomaticReviewPanel } from "./automatic-review";
 export function ListingReview({
   initialListing,
 }: {
@@ -174,6 +175,19 @@ export function ListingReview({
       locked.current = false;
     }
   }
+  async function automaticReview() {
+    if (locked.current || busy || dirty || mustReload || !source?.fingerprint) return;
+    const mode = listing.status === "published" ? "preview" : "apply";
+    locked.current = true; setBusy(true); setMessage(""); setFailed(false);
+    try {
+      const response = await fetch(`/api/admin/anuncios/${listing.id}/auto-review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_listing_id: String(source.id), fingerprint: source.fingerprint, mode }), signal: AbortSignal.timeout(40000) });
+      const body = await response.json();
+      sessionError(response.status);
+      if (await loadLatest()) { setFailed(!response.ok); setMessage(response.ok ? mode === "preview" ? "Simulação concluída. A publicação atual foi preservada." : "Análise concluída. Confira a decisão e o motivo registrados." : adminError(response.status, body.code)); }
+      router.refresh();
+    } catch { setMustReload(true); setFailed(true); setMessage("Não foi possível confirmar a análise. Atualize o detalhe antes de tentar novamente."); }
+    finally { locked.current = false; setBusy(false); }
+  }
   async function decision(action: "reject" | "reopen") {
     if (locked.current || busy || mustReload || dirty || !reviewed || !source?.fingerprint || (action === "reject" && !reason.trim())) return;
     locked.current = true; setBusy(true); setMessage(""); setReviewed(false);
@@ -201,6 +215,13 @@ export function ListingReview({
         </div>
         <div>{(listing.is_manual || listing.creation_method === "manual_ai") && <span className="status-badge">Manual</span>} <span className="status-badge">{statusLabel(listing.status)}</span></div>
       </div>
+      <AutomaticReviewPanel review={listing.automatic_review} history={listing.review_history}>
+        {!(listing.is_manual || listing.creation_method === "manual_ai") && ["draft", "published"].includes(listing.status) && <>
+          <p>{listing.status === "published" ? "Simule a análise sem alterar a aprovação já registrada." : "A reavaliação pode aprovar e publicar, rejeitar ou manter este rascunho pendente, conforme a decisão registrada."}</p>
+          <button type="button" className="button secondary" disabled={busy || dirty || mustReload || !source?.fingerprint} onClick={automaticReview}>{busy ? "Aguarde…" : listing.status === "published" ? "Simular revisão da IA" : "Reavaliar com IA"}</button>
+          {!source?.fingerprint && <p>Selecione um anúncio de origem para avaliar.</p>}
+        </>}
+      </AutomaticReviewPanel>
       <div className="detail-grid admin-review">
         <div>
           <section className="panel">
