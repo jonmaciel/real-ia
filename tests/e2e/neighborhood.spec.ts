@@ -24,6 +24,9 @@ test("mapa abre automaticamente, mostra essenciais por categoria e mantém tiles
   await expect(page.getByRole("button", { name: "Carregar mapa e explorar" })).toHaveCount(0);
   await expect(page.locator(".leaflet-control-attribution")).toContainText("OpenStreetMap");
   await expect(page.locator(".neighborhood-home-pin")).toBeVisible();
+  await expect(page.locator(".home-marker")).toHaveText("");
+  await expect(page.locator(".home-marker svg")).toBeVisible();
+  await expect(page.locator(".neighborhood-home-pin")).toHaveAttribute("aria-label", "Ponto publicado do imóvel");
   await expect(page.locator(".neighborhood-places li")).toHaveCount(4);
   for (const category of ["bakery", "pharmacy", "supermarket", "bus"]) await expect(page.locator(`.neighborhood-places li[data-category=${category}]`)).toHaveCount(1);
   await expect(page.locator(".neighborhood-places img")).toHaveCount(0);

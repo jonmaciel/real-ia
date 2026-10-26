@@ -26,6 +26,15 @@ test("remover pill reseta paginação e preserva orçamento, demais critérios e
   assert.equal(withoutBudget.filters.max_price, undefined); assert.equal(withoutBudget.filters.price_basis, "total_monthly");
   assert.equal(removeAssistantFilter(next, "preferred_amenities", "gym").filters.preferred_amenities, undefined);
 });
+test("base de total mensal continua visível e pode ser removida após retirar o último orçamento", () => {
+  const source: AssistantSearch = { filters: { price_basis: "total_monthly", max_price: 3000 }, excludedIds: [], page: 1, perPage: 20 };
+  const next = removeAssistantFilter(source, "max_price");
+  const pill = assistantFilterPills(next.filters).find(item => item.key === "price_basis");
+  assert.equal(pill?.removable, true);
+  assert.equal(pill?.label, "Somente imóveis com total mensal informado");
+  assert.equal(removeAssistantFilter(next, "price_basis").filters.price_basis, undefined);
+  assert.equal(assistantFilterPills({ price_basis: "base" }).length, 0);
+});
 
 test("query exata preserva tipo, false, zero, base, preferências, exclusões e paginação", () => {
   const params = assistantSearchParams({ filters: { city: "Araucária", property_type: "house", bedrooms: 0, furnished: false, price_basis: "total_monthly", max_price: "3000.00", amenities: ["balcony"], preferred_amenities: ["pet_friendly"] }, excludedIds: ["3"], page: 2, perPage: 20 });

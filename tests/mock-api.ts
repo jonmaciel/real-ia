@@ -12,6 +12,7 @@ import { mockLeads } from "./mock-leads";
 import { mockManual, manualPublished } from "./mock-manual";
 const unverifiedTokens = new Set<string>();
 const sessions = new Set<string>();
+const searchObservations = new Map<string, number>();
 let counter = 0;
 let assistantCounter = 0;
 const assistantSessions = new Map<string, { seen: number[]; filters: Record<string, unknown> }>();
@@ -102,6 +103,7 @@ createServer(async (req, res) => {
   const rawChunks: Buffer[] = [];
   for await (const chunk of req) rawChunks.push(Buffer.from(chunk));
   const rawBody = Buffer.concat(rawChunks);
+  if (path === "/__search-observation") return send(200, Object.fromEntries(searchObservations));
   if (path === "/__audio-observation") return send(200, audioObservation);
   if (path === "/assistant/audio-messages") {
     try {
@@ -134,8 +136,11 @@ createServer(async (req, res) => {
     try {
       const query = parseAssistantSearch(Object.fromEntries(url.searchParams));
       const f = query.filters;
+      const key = url.searchParams.toString(); searchObservations.set(key, (searchObservations.get(key) ?? 0) + 1);
+      if (f.city?.startsWith("RespostaLenta")) await new Promise(resolve => setTimeout(resolve, 11000));
       if (f.city === "Erro404" || f.city === "Erro503") return send(Number(f.city.slice(4)), { error: { code: "unavailable" } });
-      const data = assistantCatalog.filter(row => {
+      const catalog = f.city?.startsWith("RespostaLenta") ? assistantCatalog.map(row => ({ ...row, city: f.city! })) : assistantCatalog;
+      const data = catalog.filter(row => {
         const attrs: Record<string, unknown> = row.real_estate ?? {};
         const amount = f.price_basis === "total_monthly" ? row.pricing?.total_amount : row.price;
         return !query.excludedIds.includes(String(row.id)) && (!f.city || row.city === f.city) && (!f.listing_type || row.listing_type === f.listing_type)

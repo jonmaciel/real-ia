@@ -8,6 +8,10 @@ export const flags = {
   notifications: false,
   geoSearch: false,
 } as const;
+/** Compare decimal strings exactly; unknown amounts are never treated as zero. */
+export function isZeroAmount(value: unknown) {
+  return value === 0 || (typeof value === "string" && /^0+(?:\.0+)?$/.test(value));
+}
 export function safeUrl(value: string | null | undefined) {
   try {
     const u = new URL(value ?? "");

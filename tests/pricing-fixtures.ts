@@ -18,6 +18,7 @@ export const pricingListings: Listing[] = [
   { ...base, id: 702, title: "Imóvel com custos parciais", pricing: { charges: [{ code: "condominium", label: "Condomínio", amount: null, period: "monthly" }, { code: "property_tax", label: "IPTU", amount: "120.0", period: "yearly" }, { label: "Taxa administrativa", amount: "10.0", period: "unknown" }] } },
   { ...base, id: 703, title: "Imóvel antigo sem composição", price: null },
   { ...base, id: 704, title: "Imóvel para compra com despesas", listing_type: "sale", price: "685000.0", price_type: "fixed", pricing: { base_amount: "685000.0", charges: [{ label: "Condomínio", amount: "350.0", period: "monthly" }, { label: "IPTU", amount: "1200.0", period: "yearly" }] } },
+  { ...base, id: 705, title: "Imóvel com taxas zeradas", pricing: { charges: [{ label: "Condomínio", amount: "0", period: "monthly" }, { label: "IPTU", amount: "0.000", period: "yearly" }] } },
 ];
 export const pricingSources = [
   { id: 1, price: "1200.0", price_type: "monthly", currency: "BRL", pricing: rentalPricing, original_url: "https://example.com/one", source: { id: 1, name: "Origem com taxas mensais" } },

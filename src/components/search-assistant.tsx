@@ -7,6 +7,7 @@ import type { AssistantFilters, AssistantResponse } from "@/lib/assistant-contra
 import { useAssistant } from "./assistant-provider";
 import { AssistantAudio } from "./assistant-audio";
 import { AssistantMarkdown } from "./assistant-markdown";
+import { FilterNavigationContext } from "./filter-navigation";
 
 function responseKey(response: AssistantResponse | undefined, perPage: number) {
   const excluded = response?.excluded_ids ?? response?.filter_proposal?.excluded_ids;
@@ -14,8 +15,8 @@ function responseKey(response: AssistantResponse | undefined, perPage: number) {
   try { return assistantSearchParams({ filters: response.applied_filters, excludedIds: excluded.map(String), page: 1, perPage }).toString(); }
   catch { return null; }
 }
-export function SearchAssistant({ manualForm, children, query, queryKey, resultError, placement = "results" }: {
-  manualForm: ReactNode; children?: ReactNode; query: AssistantSearch; queryKey: string; resultError?: string; placement?: "home" | "results";
+export function SearchAssistant({ manualForm, children, filterPills, query, queryKey, resultError, placement = "results" }: {
+  manualForm: ReactNode; children?: ReactNode; filterPills?: ReactNode; query: AssistantSearch; queryKey: string; resultError?: string; placement?: "home" | "results";
 }) {
   const chat = useAssistant();
   const last = chat.state.turns.at(-1)?.response;
@@ -89,7 +90,12 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
       else router.push(href, { scroll: placement === "home" });
     });
   }
-  return <div className="search-experience" data-manual={manual}>
+  function navigateFilters(href: string, optimisticUpdate: () => void) {
+    if (chat.busy) chat.cancel(false);
+    setUpdateError(false); setExpectedKey(null);
+    startTransition(() => { optimisticUpdate(); router.push(href, { scroll: false }); });
+  }
+  return <FilterNavigationContext.Provider value={{ pending, navigate: navigateFilters }}><div className="search-experience" data-manual={manual}>
     <section className="search-assistant" aria-label="Busca de imóveis">
       <div className="search-mode-bar">
         <div role="tablist" aria-label="Como buscar" className="search-mode-tabs">
@@ -128,10 +134,11 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
         {manualForm}
       </div>
     </section>
+    {filterPills}
     {placement === "results" && <div className="main-search-results" aria-label="Imóveis da busca" aria-busy={pending}>
       {pending ? <div className="search-results-loading" role="status">Atualizando imóveis…</div>
         : updateError ? <div className="state-box"><p>Não foi possível atualizar os imóveis com os critérios da conversa.</p><button className="button secondary" type="button" onClick={() => { setManual(true); setUpdateError(false); }}>Usar filtros</button></div>
         : children}
     </div>}
-  </div>;
+  </div></FilterNavigationContext.Provider>;
 }

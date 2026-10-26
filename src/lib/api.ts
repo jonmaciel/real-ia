@@ -103,7 +103,11 @@ export async function search(filters: Filters) {
 }
 export async function assistantSearch(query: AssistantSearch) {
   // Exact assistant semantics; never fall back to the conventional search or fixtures.
-  return assistantResultsSchema.parse(await request(`/assistant/results?${assistantSearchParams(query, false)}`, { headers: { Accept: "application/json" } }));
+  // This is a public, deterministic GET. Reuse the tagged 60 s catalog cache;
+  // an unnecessary Accept header previously forced every click into no-store.
+  // Production responses with 20 cards can exceed the generic 10 s deadline.
+  const canonical = { ...query, filters: { ...query.filters, currency: query.filters.currency ?? "BRL", price_basis: query.filters.price_basis ?? "base", sort: query.filters.sort ?? "recommended" } };
+  return assistantResultsSchema.parse(await request(`/assistant/results?${assistantSearchParams(canonical, false)}`, { signal: AbortSignal.timeout(30000) }));
 }
 export const getListing = cache(async (id: string) => {
   const category = await realEstateCategory();

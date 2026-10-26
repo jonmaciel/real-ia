@@ -83,6 +83,48 @@ Respostas de clarificação precisam fornecer exclusões autoritativas mesmo sem
 validada; se ambos faltarem, mostra falha sem fabricar uma consulta incompleta.
 Não decodifica o token para reconstruir informações escondidas nele.
 
+## Remoção de filtros e latência
+
+As pills usam atualização otimista dentro da transição de navegação: desaparecem
+ao clicar e continuam disponíveis para novas remoções enquanto apenas os
+resultados carregam. As remoções consecutivas partem da última intenção, sem
+reintroduzir critérios de um href antigo. A URL preserva os demais critérios,
+exclusões, false/zero e reinicia a página. Não inicia geração de IA. Uma remoção
+durante um envio cancela a aceitação daquela resposta no frontend para evitar
+que uma resposta atrasada restaure filtros antigos. O processamento remoto pode
+continuar, conforme a política existente de cancelamento.
+
+Resultados de API são distintos de ausência de resultados: uma falha exibe erro
+recuperável com os filtros selecionados. O filtro `price_basis=total_monthly`
+continua restringindo o catálogo mesmo sem limites de preço; nesse caso ele
+permanece visível e removível como “Somente imóveis com total mensal informado”.
+Com orçamento presente, a base permanece contextual e não é alterada
+silenciosamente para preço base.
+
+O GET público `/assistant/results` agora usa o mesmo cache de catálogo de 60 s,
+tag `listings-public`, invalidado nas decisões editoriais. Defaults públicos de
+moeda/base/ordenação são canonicalizados para compartilhar entradas equivalentes.
+O header Accept desnecessário fazia o cliente genérico usar `no-store`; foi
+removido dessa consulta pública. Perfil, sessão, POSTs e respostas privadas
+mantêm suas políticas anteriores. O prazo desse GET passou de 10 para 30 s.
+Isso não adiciona retries, polling, fallback para outra busca ou cache de IA.
+
+Verificação em 26/10/2026: 68 testes unitários passaram; 52 jornadas de busca,
+home, remoção e navegação passaram em desktop/mobile. Após canonicalizar o cache,
+as dez jornadas específicas passaram novamente, incluindo backend simulado com
+11 s de atraso e invalidação de cache após aprovação administrativa. Build,
+TypeScript e lint passaram, com o aviso preexistente de imagem externa.
+
+Separadamente, GETs reais públicos mediram 11,54 s sem cidade e 10,34 s com
+Araucária na API, acima do antigo prazo do frontend. Um build local conectado à
+API real exibiu 20 cards em 11,41 s e repetiu a mesma consulta em 0,02 s via
+cache; retirar a cidade também exibiu 20 cards em 11,92 s, sem erro ou vazio.
+São observações pontuais locais, sem alegação de benchmark na Vercel. Não houve
+geração paga, publicação ou alteração do backend. A instância temporária foi
+encerrada. A primeira consulta sem cache continua dependendo da API; o
+[prompt de otimização do backend](backend-search-performance-prompt.txt) reúne
+as medições e o padrão de consultas por anúncio encontrado no código.
+
 ## Dependência de backend e disponibilidade
 
 Em 23/10/2026, a checagem inicial retornou 404, mas a verificação final de

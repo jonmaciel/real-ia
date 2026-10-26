@@ -16,6 +16,7 @@ export function assistantFilterPills(f: AssistantFilters) {
   // Currency and price basis explain the limits; removing a pill must not silently
   // convert a monthly-total budget into a base-price budget or another currency.
   if (f.min_price != null || f.max_price != null) add("price_basis", f.price_basis === "total_monthly" ? "Orçamento: total mensal informado pela origem" : "Orçamento: preço base anunciado", false);
+  else if (f.price_basis === "total_monthly") add("price_basis", "Somente imóveis com total mensal informado");
   if (f.currency && f.currency !== "BRL") add("currency", `Moeda: ${f.currency}`, false);
   for (const [key, label] of [["bedrooms", "quartos"], ["bathrooms", "banheiros"], ["parking_spaces", "vagas"]] as const) if (f[key] != null) add(key, `Mínimo de ${f[key]} ${label}`);
   if (f.min_area != null) add("min_area", `Área útil a partir de ${String(f.min_area).replace(".", ",")} m²`);

@@ -1,0 +1,36 @@
+Otimize a latência da busca pública exata da Morada no backend solo_leveling_api.
+Leia as instruções do repositório e preserve os demais produtos.
+
+Medição real de GETs públicos em 26/10/2026, sem geração de IA:
+- /api/v1/listings-platform/categories: HTTP 200, 0,58 s.
+- /api/v1/listings-platform/assistant/results?page=1&per_page=20:
+  HTTP 200, 11,54 s, 20 itens, total_count=126.
+- Mesmo endpoint com city=Araucária: HTTP 200, 10,34 s,
+  20 itens, total_count=44.
+São observações pontuais, não benchmark nem perfil SQL.
+
+O frontend tinha timeout genérico de 10 s e desativava cache por acrescentar
+Accept. A correção usa prazo de 30 s e cache público de 60 s com a tag existente
+listings-public, invalidada nas decisões editoriais. As pills agora respondem
+imediatamente e preservam remoções consecutivas durante a navegação.
+Isso não elimina o custo da primeira consulta sem cache.
+
+Investigue app/services/listings_platform/assistant/search.rb e
+app/controllers/listings_platform/assistant_results_controller.rb:
+- Meça duração de SQL, contagem de consultas e serialização para 1, 20 e 100 itens.
+- page carrega real_estate_detail, mas card consulta capa/mídias e anúncios de
+  origem por registro. cover_url também verifica a fonte da mídia.
+- Evite esse padrão de consultas por imóvel com carregamento em lote ou consultas
+  agrupadas. Não carregue todas as mídias do catálogo indiscriminadamente.
+- Preserve ordem, capa, regras de publicação/reprodução e segurança das URLs.
+- Avalie count, joins, filtros geográficos com translate/lower e ordenação usando
+  EXPLAIN em ambiente apropriado; acrescente índices apenas com evidência.
+- Preserve filtros, price_basis, nulls, moedas, periodicidades, preferências,
+  exclusões, paginação, total_count e meta.applied_filters. Não troque por /search
+  nem relaxe filtros. O join atual exige detalhe imobiliário: confirme o impacto
+  em registros publicados incompletos antes de propor qualquer mudança semântica.
+- Não use IA neste GET e não aumente quotas ou timeout de geração.
+
+Inclua testes de regressão sem N+1, permissões de mídia e nulls. Relate medições
+antes/depois e especs reais. Não faça gerações pagas ou aprovações automáticas.
+Preserve o contrato público atual; a remoção de filtros não precisa de novo endpoint.

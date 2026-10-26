@@ -49,7 +49,8 @@
 .nearby-attribution { display: block; margin-top: 5px; font-size: 10px; }
 .google-maps-credit { font-family: Arial, sans-serif; font-size: 12px; font-weight: 400; font-style: normal; letter-spacing: normal; white-space: nowrap; color: #5e5e5e; }
 .neighborhood-home-pin, .neighborhood-place-pin { background: transparent; border: 0; }
-.home-marker { display: grid; place-items: center; width: 86px; height: 38px; padding: 0 10px; border-radius: 22px; background: #253a33; border: 3px solid white; color: white; font: 700 13px var(--font); box-shadow: 0 3px 12px #0004; }
+.home-marker { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; background: #253a33; border: 3px solid white; color: white; box-shadow: 0 3px 12px #0004; }
+.home-marker svg { display: block; }
 .poi-marker { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50% 50% 50% 8px; transform: rotate(-45deg); background: var(--poi-color); border: 3px solid white; color: white; font: 700 13px var(--font); box-shadow: 0 3px 8px #0004; }
 .poi-marker > span { transform: rotate(45deg); }
 .neighborhood-place-pin.is-selected .poi-marker, .is-selected > .poi-marker { outline: 3px solid #24313b; outline-offset: 2px; }

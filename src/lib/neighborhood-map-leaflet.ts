@@ -8,7 +8,7 @@ export async function createLeafletMap({ container, point, signal, onError }: Ma
   const map = L.map(container, { scrollWheelZoom: false }).setView([point.lat, point.lng], 15);
   const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors' }).addTo(map);
   tiles.on("tileerror", onError);
-  const home = L.marker([point.lat, point.lng], { icon: L.divIcon({ className: "neighborhood-home-pin", html: markerContent(), iconSize: [86, 44], iconAnchor: [43, 44] }), title: "Ponto publicado do imóvel", alt: "Ponto publicado do imóvel" }).addTo(map);
+  const home = L.marker([point.lat, point.lng], { icon: L.divIcon({ className: "neighborhood-home-pin", html: markerContent(), iconSize: [44, 44], iconAnchor: [22, 44] }), title: "Ponto publicado do imóvel", alt: "Ponto publicado do imóvel" }).addTo(map);
   home.getElement()?.setAttribute("aria-label", "Ponto publicado do imóvel");
   const group = L.layerGroup().addTo(map);
   const markers = new Map<string, ReturnType<typeof L.marker>>();

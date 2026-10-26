@@ -7,6 +7,7 @@ import { search, assistantSearch, realEstateCategory, errorMessage } from "@/lib
 import { parseFilters, serialize, type Filters } from "@/lib/filters";
 import { assistantSearchParams, exactFiltersSchema, parseAssistantSearch, type AssistantSearch } from "@/lib/assistant-search";
 import { AppliedFilterPills } from "@/components/applied-filter-pills";
+import { ConventionalFilterPills } from "@/components/conventional-filter-pills";
 export const metadata = { ...pageMetadata("Buscar imóveis para comprar e alugar", "Encontre seu próximo imóvel com ajuda da IA ou use os filtros de cidade, bairro, preço e características na Morada.", "/buscar"), robots: { index: false, follow: true } };
 export default async function Results({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const raw = await searchParams;
@@ -38,22 +39,18 @@ export default async function Results({ searchParams }: { searchParams: Promise<
   } catch (e) { error = errorMessage(e); }
   const queryKey = exact ? assistantSearchParams(query).toString() : `legacy:${serialize(filters)}`;
   const href = (page: number) => `/buscar?${exact ? assistantSearchParams({ ...query, page }) : serialize({ ...filters, page })}`;
-  const labels: Record<string, string> = { city: "Cidade", neighborhood: "Bairro", region: "Estado", country: "País", listing_type: "Modalidade", currency: "Moeda", min_price: "Preço mínimo", max_price: "Preço máximo", q: "Título", availability: "Disponibilidade" };
-  const active = Object.entries(filters).filter(([key, value]) => !["page", "per_page", "sort"].includes(key) && value !== undefined && value !== "" && !(key === "currency" && value === "BRL"));
   const appliedQuery = result && "applied_filters" in result.meta ? { ...query, filters: result.meta.applied_filters } : query;
   return <section className="section results">
     <nav className="breadcrumb"><Link href="/">Início</Link><span>/</span>Explorar imóveis</nav>
     <span className="eyebrow">O SEU LUGAR, DO SEU JEITO</span>
     <h1>Explore novas possibilidades.</h1>
     <SearchAssistant query={query} queryKey={queryKey} resultError={error}
+      filterPills={exact ? <AppliedFilterPills query={appliedQuery} applied={!error} /> : <ConventionalFilterPills filters={filters} applied={!error} />}
       manualForm={<ConventionalSearchBar filters={filters} full assistantQuery={exact ? query : undefined} />}>
       <div className="results-toolbar">
         <p>{result && "total_count" in result.meta ? `${result.meta.total_count} imóveis` : result ? `${result.data.length} imóveis nesta página` : "Imóveis"} · Página {query.page}</p>
         <Link href="/buscar">Limpar filtros</Link>
       </div>
-      {exact ? <AppliedFilterPills query={appliedQuery} applied={!error} /> : <div className="chips" aria-label={error ? "Filtros selecionados" : "Filtros aplicados"}>
-        {active.map(([key, value]) => key === "currency" ? <span key={key}>Moeda: {String(value)}</span> : <Link key={key} aria-label={`Remover filtro ${labels[key]}`} href={`/buscar?${(() => { const next = { ...filters, page: 1 }; delete (next as Record<string, unknown>)[key]; return serialize(next); })()}`}>{labels[key]}: {value === "sale" ? "Compra" : value === "rental" ? "Aluguel" : String(value)} ×</Link>)}
-      </div>}
       {error ? <ErrorState message={error} href={href(query.page)} /> : result?.data.length ? <PropertyGrid properties={result.data} category={category} /> : <EmptyState />}
       {result && <nav className="pagination" aria-label="Paginação">
         {query.page > 1 && <Link className="button secondary" href={href(query.page - 1)}>← Anterior</Link>}

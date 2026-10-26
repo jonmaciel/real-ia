@@ -1,5 +1,5 @@
 import type { Listing } from "@/lib/contracts";
-import { money, period } from "@/lib/presentation";
+import { isZeroAmount, money, period } from "@/lib/presentation";
 
 type CostProperty = Pick<Listing, "price" | "price_type" | "currency" | "listing_type" | "pricing">;
 const chargeLabels: Record<string, string> = {
@@ -13,7 +13,8 @@ function costPeriod(value: string | null | undefined) {
 /** Reproduces source amounts; never sums fees, prorates periods or infers a total. */
 export function PropertyCosts({ property }: { property: CostProperty }) {
   const pricing = property.pricing;
-  const charges = pricing?.charges ?? [];
+  const reportedCharges = pricing?.charges ?? [];
+  const charges = reportedCharges.filter(charge => !isZeroAmount(charge.amount));
   const hasDiscount = pricing?.discount_amount != null;
   const hasGross = pricing?.gross_amount != null;
   const hasTotal = pricing?.total_amount != null;
@@ -40,6 +41,7 @@ export function PropertyCosts({ property }: { property: CostProperty }) {
     <p className="cost-note">{hasTotal
       ? "Total reproduzido da origem, sem somar as taxas novamente. Confirme as condições e quais despesas estão incluídas."
       : charges.length ? "O anunciante não informou um total. As cobranças mantêm suas periodicidades e não são somadas pelo Morada."
+        : reportedCharges.length ? "O anunciante não informou um total. Confirme se existem outras despesas."
         : "Taxas adicionais e total não informados. O preço anunciado pode não incluir todas as despesas."}</p>
     {hasTotal && pricing.total_source !== "reported" && <p className="cost-note">A origem deste total não foi confirmada.</p>}
     {property.listing_type === "sale" && charges.length > 0 && <p className="cost-note">Condomínio e tributos são despesas separadas do preço de compra.</p>}

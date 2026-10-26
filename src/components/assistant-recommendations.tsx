@@ -2,7 +2,7 @@
 import type { Recommendation } from "@/lib/assistant-contracts";
 import { citationUrl } from "@/lib/property-questions";
 import { preferenceLabel } from "@/lib/assistant-presentation";
-import { money, period } from "@/lib/presentation";
+import { isZeroAmount, money, period } from "@/lib/presentation";
 import { PropertyCard } from "./properties";
 export function AssistantRecommendations({ cards, onSelect }: { cards: Recommendation[]; onSelect: (id: string) => void }) {
   return <div className="assistant-recommendations">{cards.map(card => {
@@ -14,7 +14,7 @@ export function AssistantRecommendations({ cards, onSelect }: { cards: Recommend
         {pricing && <details><summary>Preço e taxas informados</summary>
           {pricing.gross_amount != null && <p>Preço bruto: {money(pricing.gross_amount, card.currency)}{period(card.price_type)}</p>}
           {pricing.discount_amount != null && <p>Desconto informado: {money(pricing.discount_amount, card.currency)}. Condição: {pricing.discount_condition ?? "não informada"}.</p>}
-          {pricing.charges?.map((charge, i) => <p key={i}>{charge.label ?? "Taxa"}: {money(charge.amount, card.currency)}{charge.amount != null ? period(charge.period) : ""}</p>)}
+          {pricing.charges?.filter(charge => !isZeroAmount(charge.amount)).map((charge, i) => <p key={i}>{charge.label ?? "Taxa"}: {money(charge.amount, card.currency)}{charge.amount != null ? period(charge.period) : ""}</p>)}
           {pricing.total_amount != null && <p>Total informado pela origem: {money(pricing.total_amount, card.currency)}{period(pricing.total_period)}{pricing.total_source !== "reported" ? " · origem do total não confirmada" : ""}</p>}
           <small>Não somamos taxas de periodicidades diferentes nem o preço bruto ao líquido.</small>
         </details>}

@@ -5,6 +5,7 @@ import { adminDetailSchema, adminSourceSchema } from "../src/lib/admin-contracts
 import { recommendationSchema } from "../src/lib/assistant-contracts";
 import { recommendation } from "./assistant-fixtures";
 import { pricingListings, pricingSources, rentalPricing } from "./pricing-fixtures";
+import { isZeroAmount } from "../src/lib/presentation";
 
 test("composição é preservada nos contratos público, de fontes, admin e assistente", () => {
   assert.deepEqual(listingSchema.parse(pricingListings[0]).pricing, rentalPricing);
@@ -17,6 +18,8 @@ test("composição é preservada nos contratos público, de fontes, admin e assi
 });
 
 test("taxa zero é distinta de valor desconhecido; ausência de composição e total é compatível", () => {
+  for (const value of [0, "0", "0.0", "0.00", "000.000"]) assert.equal(isZeroAmount(value), true);
+  for (const value of [null, undefined, "", "0.01", `0.${"0".repeat(400)}1`]) assert.equal(isZeroAmount(value), false);
   assert.equal(pricingSchema.parse(rentalPricing).charges?.[1].amount, "0.0");
   assert.equal(listingSchema.parse(pricingListings[1]).pricing?.charges?.[0].amount, null);
   assert.equal(listingSchema.parse(pricingListings[1]).pricing?.total_amount, undefined);
