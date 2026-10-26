@@ -3,45 +3,54 @@ import { useEffect, useId, useRef, useState, useTransition, type FormEvent, type
 import { useRouter } from "next/navigation";
 import { ArrowUp, SlidersHorizontal, Sparkles } from "lucide-react";
 import { assistantSearchParams, exactFiltersSchema, type AssistantSearch } from "@/lib/assistant-search";
-import type { AssistantFilters } from "@/lib/assistant-contracts";
+import type { AssistantFilters, AssistantResponse } from "@/lib/assistant-contracts";
 import { useAssistant } from "./assistant-provider";
 import { AssistantAudio } from "./assistant-audio";
 import { AssistantMarkdown } from "./assistant-markdown";
 
-export function SearchAssistant({ manualForm, children, query, queryKey, resultError }: {
-  manualForm: ReactNode; children: ReactNode; query: AssistantSearch; queryKey: string; resultError?: string;
+function responseKey(response: AssistantResponse | undefined, perPage: number) {
+  const excluded = response?.excluded_ids ?? response?.filter_proposal?.excluded_ids;
+  if (!response || response.mode !== "search" || !excluded) return null;
+  try { return assistantSearchParams({ filters: response.applied_filters, excludedIds: excluded.map(String), page: 1, perPage }).toString(); }
+  catch { return null; }
+}
+export function SearchAssistant({ manualForm, children, query, queryKey, resultError, placement = "results" }: {
+  manualForm: ReactNode; children?: ReactNode; query: AssistantSearch; queryKey: string; resultError?: string; placement?: "home" | "results";
 }) {
   const chat = useAssistant();
+  const last = chat.state.turns.at(-1)?.response;
   const { continueSearch, subscribeSearch } = chat;
   const router = useRouter();
-  const [manual, setManual] = useState(false);
+  const [manual, setManual] = useState(() => placement === "results" && responseKey(last, query.perPage) === queryKey && last?.ui_action?.type === "switch_search_tab");
   const [audioActive, setAudioActive] = useState(false);
   const [pending, startTransition] = useTransition();
   const [updateError, setUpdateError] = useState(false);
-  const [expectedKey, setExpectedKey] = useState<string | null>(null);
+  // A home search hands off its latest answer and authoritative filters to /buscar.
+  const [expectedKey, setExpectedKey] = useState<string | null>(() => {
+    const key = responseKey(chat.state.turns.at(-1)?.response, query.perPage);
+    return placement === "results" && key === queryKey ? key : null;
+  });
   const id = useId();
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const input = useRef<HTMLTextAreaElement>(null);
-  const last = chat.state.turns.at(-1)?.response;
   useEffect(() => { continueSearch(); }, [continueSearch]);
   useEffect(() => subscribeSearch(last => {
     if (last.action === "traditional_search" && last.ui_action?.type === "switch_search_tab") setManual(true);
     // Complete authoritative exclusions are required, including during clarification.
     // Never infer them from the opaque token or drop them to manufacture a list.
-    const excluded = last.excluded_ids ?? last.filter_proposal?.excluded_ids;
-    if (!excluded) { setUpdateError(true); return; }
-    try {
-      const params = assistantSearchParams({ filters: last.applied_filters, excludedIds: excluded.map(String), page: 1, perPage: query.perPage });
-      const key = params.toString();
-      setUpdateError(false); setExpectedKey(key);
-      startTransition(() => router.replace(`/buscar?${key}`, { scroll: false }));
-    } catch { setUpdateError(true); }
-  }), [subscribeSearch, query.perPage, router]);
+    const key = responseKey(last, query.perPage);
+    if (!key) { setUpdateError(true); return; }
+    setUpdateError(false); setExpectedKey(key);
+    startTransition(() => {
+      if (placement === "home") router.push(`/buscar?${key}`);
+      else router.replace(`/buscar?${key}`, { scroll: false });
+    });
+  }), [subscribeSearch, query.perPage, router, placement]);
   const updating = chat.busy || pending;
   const updated = expectedKey === queryKey && !resultError && !updateError;
   const message = chat.busy ? chat.sendingAudio ? "Transcrevendo e pensando…" : "Pensando…"
     : pending ? "Atualizando imóveis…"
-    : chat.error ? chat.error.message
+    : chat.error ? placement === "home" && chat.error.status === 503 ? "A busca com IA está temporariamente indisponível. Tente novamente ou use os filtros." : chat.error.message
     : updateError || (expectedKey === queryKey && resultError) ? "Não foi possível atualizar a lista. Tente novamente em instantes."
     : updated ? "Lista atualizada."
     : "";
@@ -51,17 +60,18 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
     setUpdateError(false);
     try {
     // Hydrate only when the accepted URL differs from the conversation snapshot.
-    const current = assistantSearchParams({ ...query, page: 1, excludedIds: [] }, false).toString();
+    const activeQuery = placement === "home" ? { ...query, filters: chat.state.filters } : query;
+    const current = assistantSearchParams({ ...activeQuery, page: 1, excludedIds: [] }, false).toString();
     let previous = "";
     try { previous = assistantSearchParams({ filters: chat.state.filters, excludedIds: [], page: 1, perPage: query.perPage }, false).toString(); } catch { /* Invalid snapshots are never submitted. */ }
-    const snapshot: AssistantFilters = exactFiltersSchema.parse(query.filters);
+    const snapshot: AssistantFilters = exactFiltersSchema.parse(activeQuery.filters);
     for (const key of ["min_price", "max_price", "min_area", "max_area"] as const) if (snapshot[key] != null) snapshot[key] = Number(snapshot[key]);
-    return chat.send(audio ?? chat.question, { page: "search", ...(current !== previous ? { current_filters: snapshot } : {}) });
+    return chat.send(audio ?? chat.question, { page: placement === "home" ? "home" : "search", ...(current !== previous ? { current_filters: snapshot } : {}) });
     } catch { setUpdateError(true); return Promise.resolve(false); }
   }
   function restart() {
     chat.restartSearch(); setExpectedKey(null); setUpdateError(false);
-    startTransition(() => router.replace("/buscar", { scroll: false }));
+    if (placement !== "home") startTransition(() => router.replace("/buscar", { scroll: false }));
     input.current?.focus();
   }
   function submitFilters(event: FormEvent<HTMLDivElement>) {
@@ -76,7 +86,7 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
     setUpdateError(false); setExpectedKey(null);
     startTransition(() => {
       if (href === window.location.pathname + window.location.search) router.refresh();
-      else router.push(href, { scroll: false });
+      else router.push(href, { scroll: placement === "home" });
     });
   }
   return <div className="search-experience" data-manual={manual}>
@@ -118,10 +128,10 @@ export function SearchAssistant({ manualForm, children, query, queryKey, resultE
         {manualForm}
       </div>
     </section>
-    <div className="main-search-results" aria-label="Imóveis da busca" aria-busy={pending}>
+    {placement === "results" && <div className="main-search-results" aria-label="Imóveis da busca" aria-busy={pending}>
       {pending ? <div className="search-results-loading" role="status">Atualizando imóveis…</div>
         : updateError ? <div className="state-box"><p>Não foi possível atualizar os imóveis com os critérios da conversa.</p><button className="button secondary" type="button" onClick={() => { setManual(true); setUpdateError(false); }}>Usar filtros</button></div>
         : children}
-    </div>
+    </div>}
   </div>;
 }

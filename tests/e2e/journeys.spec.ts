@@ -6,6 +6,7 @@ test("início → busca → detalhe → fonte original; voltar preserva filtros"
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Encontre um lugar",
   );
+  await page.getByRole("tab", { name: "Usar filtros", exact: true }).click();
   await page.getByPlaceholder("Digite a cidade").fill("Curitiba");
   await page.locator('input[value="rental"]').check();
   await page.getByRole("button", { name: "Buscar imóveis" }).click();
@@ -34,7 +35,7 @@ test("paginação sem total; filtro desconhecido não é aplicado", async ({
   await page.goto("/buscar?per_page=2&bedrooms=3");
   await expect(page.locator(".property-card")).toHaveCount(2);
   await page.getByRole("link", { name: "Próxima →" }).click();
-  await expect(page).toHaveURL(/page=2/);
+  await expect(page).toHaveURL(url => url.searchParams.get("page") === "2");
   await expect(page.locator(".property-card")).toHaveCount(2);
   await page.goBack();
   await expect(page).toHaveURL(/per_page=2/);

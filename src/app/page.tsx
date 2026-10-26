@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ArrowUpRight, Layers3, MapPin, ShieldCheck, House, KeyRound } from "lucide-react";
 import { ConventionalSearchBar } from "@/components/search-form";
+import { SearchAssistant } from "@/components/search-assistant";
 import { PropertyGrid, ErrorState } from "@/components/properties";
 import { errorMessage, search, realEstateCategory } from "@/lib/api";
 import { parseFilters } from "@/lib/filters";
@@ -24,10 +25,10 @@ export default async function Home() {
         <div className="portal-hero-content">
           <span className="hero-kicker">SEU NOVO ENDEREÇO COMEÇA AQUI</span>
           <h1 id="home-title">Encontre um lugar<br />para chamar de seu.</h1>
-          <p>Comprar ou alugar. Explore as possibilidades e encontre sua próxima morada.</p>
-          <section className="hero-search" aria-label="Busca de imóveis">
-            <ConventionalSearchBar />
-          </section>
+          <p>Descreva o lugar que você procura ou escolha seus filtros.</p>
+          <div className="hero-search">
+            <SearchAssistant placement="home" query={{ filters: {}, excludedIds: [], page: 1, perPage: 20 }} queryKey="home" manualForm={<ConventionalSearchBar />} />
+          </div>
         </div>
         <small className="hero-image-credit">Ambientação ilustrativa gerada por IA · não é um anúncio</small>
       </section>

@@ -62,7 +62,7 @@ test("portal moderno mantém busca e layout em celular desktop e ultrawide", asy
     await expect(page.locator(".portal-hero-image")).toBeVisible();
     await expect(page.getByText("Ambientação ilustrativa gerada por IA · não é um anúncio")).toBeVisible();
     expect(await page.getByRole("heading", { level: 1 }).evaluate((node) => getComputedStyle(node).fontFamily)).not.toContain("Georgia");
-    await expect(page.getByRole("button", { name: "Buscar imóveis" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enviar busca", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`portal-${width}.png`), fullPage: true });
     if (width === 1440) await page.screenshot({ path: info.outputPath("portal-preview.png") });

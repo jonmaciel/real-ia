@@ -2,8 +2,25 @@
 
 Implementação no frontend Morada. Em `/buscar`, a IA é a opção inicial e há
 somente uma lista de imóveis, atualizada a cada prompt. Filtros convencionais
-ficam na opção “Usar filtros”. A janela flutuante continua nas outras páginas
-públicas, com o mesmo estado de conversa, sem duplicar a busca nesta rota.
+ficam na opção “Usar filtros”. A página inicial também oferece essa mesma busca
+embutida, com texto ou áudio e filtros tradicionais opcionais. Não há janela
+flutuante nem lançador na home, inclusive após 20 segundos ou ao voltar de um
+imóvel. A conversa flutuante permanece disponível nas demais páginas elegíveis.
+
+Na home, um envio explícito usa `context.page=home`. Após a resposta validada,
+navega internamente para `/buscar` com filtros e exclusões autoritativos. A
+última clarificação, transcrição, histórico e token opaco acompanham a navegação,
+sem reenviar o texto transcrito ou criar outra lista. A URL mantém apenas os
+critérios públicos; voltar retorna à home. Falhas preservam o prompt e permitem
+alternar para os filtros. Nenhuma chamada de IA ocorre ao montar a página.
+
+Validação da home em 26/10/2026: 67 testes unitários e 57 jornadas desktop/mobile
+passaram, com um teste de menu móvel pulado no desktop. Build de produção e
+TypeScript passaram; lint sem erros, mantendo o aviso preexistente de imagem
+externa em `media-image.tsx`. A cobertura verifica texto/áudio, clarificação e
+pills após navegar, falha sem perder o prompt, ausência de popup na home mesmo
+após 60 segundos e preservação da conversa nos imóveis. Apenas API de contrato,
+sem geração paga ou escritas em produção.
 
 Gravação e anexos usam o mesmo estado e respostas. Ver
 [assistant-audio.md](assistant-audio.md) para multipart, HMAC, limites e timeout
@@ -18,7 +35,8 @@ pergunta de clarificação quando necessária. Cada nova resposta válida em mod
 search notifica a superfície ativa, que aplica `applied_filters` e exclusões na
 URL `/buscar?assistant=1&...`, sem mudar de página e sem clique adicional. Essa
 atualização automática foi explicitamente solicitada pelo usuário para a lista.
-As demais superfícies não adquirem autorização para navegação automática.
+Na home, o envio explícito inicia a navegação para os resultados; a conversa
+flutuante mantém suas confirmações próprias de navegação.
 
 O Server Component consulta `GET /assistant/results` e renderiza a única grade
 principal. Não usa os três cards do chat como se fossem a lista completa, não

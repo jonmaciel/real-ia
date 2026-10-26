@@ -8,7 +8,7 @@ import { PropertyQuestions } from "./property-questions";
 export function PropertyChatWidget() {
   const pathname = usePathname();
   const { state } = useAssistant();
-  const eligible = !/^\/(admin|auth|conta|buscar)(\/|$)/.test(pathname);
+  const eligible = pathname !== "/" && !/^\/(admin|auth|conta|buscar)(\/|$)/.test(pathname);
   const [open, setOpen] = useState(false);
   const interacted = useRef(false);
   const allowed = useRef(eligible);

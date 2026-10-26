@@ -16,21 +16,29 @@ test("janela abre em 20 segundos sem geração ou roubo de foco e não reabre ap
  const input=page.getByLabel("Sua pergunta sobre o imóvel"); await input.fill("Minha pergunta ainda não enviada"); await input.press("Escape"); await launcher.click(); await expect(input).toHaveValue("Minha pergunta ainda não enviada");
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
-test("conta tempo entre páginas e oferece contexto apenas ao abrir um imóvel",async({page})=>{
+test("home não mostra janela nem lançador; conversa permanece disponível no imóvel",async({page})=>{
  await page.clock.install(); await page.goto("/");
- await expect(page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true})).toBeVisible();
- await page.clock.fastForward(20000); const dialog=page.getByRole("dialog",{name:"Converse com o Morada"});
- await expect(dialog.getByRole("heading",{name:"Encontre seu imóvel",exact:true})).toBeVisible();
+ await expect(page.locator(".property-chat-widget")).toHaveCount(0);
+ await page.clock.fastForward(60000);
+ await expect(page.getByRole("dialog",{name:"Converse com o Morada"})).toHaveCount(0);
  await expect(page.getByLabel("O que você procura?")).toBeVisible();
+ await page.locator(`a[href="${detail}"]`).first().click();
+ await expect(page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true})).toBeVisible();
+ await page.clock.fastForward(2000);
+ await expect(page.getByRole("dialog",{name:"Converse com o Morada"})).toBeVisible();
+ await page.getByRole("dialog",{name:"Converse com o Morada"}).getByRole("button",{name:"Minimizar conversa",exact:true}).click();
+ await page.getByRole("link",{name:"Morada, início",exact:true}).click();
+ await expect(page.locator(".property-chat-widget")).toHaveCount(0);
  await page.goto("/auth/login"); await expect(page.locator(".property-chat-widget")).toHaveCount(0);
 });
 test("abertura automática aguarda formulário ativo",async({page})=>{
- await page.clock.install(); await page.goto("/");
- await page.getByRole("button",{name:"Abrir conversa com o Morada",exact:true}).click();
- await page.getByRole("dialog").getByRole("button",{name:"Minimizar conversa",exact:true}).click();
- // A full visit starts a fresh timer; the search input keeps focus during expiry.
- await page.goto("/");
- const input=page.locator("main input").first(); await input.focus();
- await page.clock.fastForward(22000); await expect(page.getByRole("dialog")).toHaveCount(0);
- await input.blur(); await page.clock.fastForward(2000); await expect(page.getByRole("dialog")).toBeVisible();
+ await page.clock.install(); await page.goto(detail);
+ await page.getByRole("button",{name:"Tenho interesse",exact:true}).click();
+ await page.getByRole("textbox",{name:"Nome",exact:true}).fill("Pessoa interessada");
+ await page.clock.fastForward(22000);
+ await expect(page.getByRole("dialog",{name:"Converse com o Morada"})).toHaveCount(0);
+ await expect(page.getByRole("dialog",{name:"Tenho interesse neste imóvel"})).toBeVisible();
+ await page.getByRole("button",{name:"Fechar formulário de interesse"}).click();
+ await page.clock.fastForward(2000);
+ await expect(page.getByRole("dialog",{name:"Converse com o Morada"})).toBeVisible();
 });

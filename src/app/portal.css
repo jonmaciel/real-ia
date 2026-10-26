@@ -41,6 +41,8 @@ em { color: inherit; }
 .portal-hero-content > p { color: #fff; font-size: 16px; margin: 0 0 28px; }
 .hero-search { max-width: 1180px; margin: 0 auto; text-align: left; border-radius: 16px; box-shadow: 0 12px 44px #0003; background: white; }
 .hero-search .search-form { padding: 0 24px 18px; border: 0; border-radius: 16px; box-shadow: none; }
+.hero-search .search-assistant { margin: 0; padding: 24px; border: 0; background: transparent; }
+.hero-search .search-assistant .search-form { padding: 0; }
 .hero-image-credit { position: absolute; bottom: 12px; right: max(20px, calc((100% - 1280px) / 2)); left: 20px; text-align: right; color: white; font-size: 10px; text-shadow: 0 1px 3px #000; }
 .transaction { gap: 10px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
 .transaction span { padding: 16px 20px 13px; min-height: 52px; font-size: 15px; border-radius: 0; color: #434b54; }
@@ -169,6 +171,7 @@ input, select, textarea { border-color: #b9c1c9; border-radius: 8px; }
   .portal-hero-image { object-position: 65% center; }
   .hero-search, .hero-search .search-form { border-radius: 12px; }
   .hero-search .search-form { padding: 0 16px 16px; }
+  .hero-search .search-assistant { padding: 16px; }
   .transaction { gap: 10px; margin-bottom: 16px; }
   .transaction span { font-size: 14px; padding-inline: 16px; }
   .hero-search .search-fields, .search-fields { grid-template-columns: 1fr 1fr; gap: 12px; }
