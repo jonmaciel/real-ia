@@ -1,0 +1,56 @@
+Otimize a latência do assistente de imóveis no solo_leveling_api. Leia AGENTS.md,
+docs/listings_platform/property-chat.md e a documentação do assistente/áudio.
+Preserve os demais produtos, treinos, quests, sessões, revisão editorial e custos.
+
+Contexto confirmado no frontend Morada:
+- Texto e áudio usam /assistant/messages e /assistant/audio-messages via BFF.
+- O áudio não reenvia a transcrição. Timeout 95 s, sem retries automáticos.
+- O POST fornece até três recomendações; para renderizar a lista completa,
+  o frontend consulta GET /assistant/results depois da resposta.
+- Quando os filtros/exclusões/página não mudam e a lista válida recebida há menos
+  de 60 s já está pronta,
+  o frontend agora evita a navegação redundante de resultados.
+- BFFs expõem Server-Timing assistant;dur apenas com duração agregada, sem PII.
+
+1. Meça antes de alterar: transcrição, Planner/Responses, SQL/count, sugestões
+de ajustes em zero resultados, serialização/mídias e transferência. Obtenha p50/p95
+e número de queries com instrumentação que não registre áudio, perguntas, histórico,
+tokens, contatos ou payloads originais. Separe latência do catálogo e do provedor.
+Não use loops de smoke pago nem faça chamadas reais sem orçamento autorizado.
+
+2. Elimine N+1 na montagem de cards/mídias autorizadas/origens; carregue em lote.
+Verifique duplicações de count e buscas, inclusive em Adjustments. Use o mesmo
+escopo de publicação, permissões, exclusões e semântica dos filtros atuais.
+Veja também o prompt frontend docs/backend-search-performance-prompt.txt.
+
+3. Avalie uma extensão opcional e retrocompatível para clientes da página de busca:
+retornar uma página completa validável {data,meta:{page,per_page,total_count,
+has_more,applied_filters}} junto da resposta final, baseada exatamente nos filtros
+e excluded_ids autoritativos. Discuta/documente o opt-in e seus limites ANTES de o
+frontend depender dele; não troque três recomendações por um total inventado.
+Preserve seen_ids vs excluded_ids e não exponha search_token em URLs/caches públicos.
+Avalie custo do payload vs economia da segunda consulta. Preferir caminho opcional
+para a busca; chat do imóvel não precisa carregar 20 cards.
+
+4. Perfil do Planner: já usa store:false, reasoning low, saída estruturada e
+max_output_tokens 1800 no código inspecionado. Não mude modelo às cegas nem corte
+JSON necessário. Busque menos tokens gerados sem perder campos/semântica. Mantenha
+instruções e schema estáveis no prefixo e contexto/histórico dinâmicos depois,
+quando compatível com a API/modelo. Verifique cached_tokens e latência reais;
+cache de prompt não é cache compartilhado de conversa e não garante ganho fixo.
+Não una transcrição ao Planner especulativamente: há dependência real do texto.
+Não dispare geração paralela paga só para mascarar espera.
+
+5. Streaming só como evolução documentada com eventos validados e terminal
+autoritativo; preservar JSON atual, cancelamento, HMAC, Origin/IP confiável,
+Retry-After, store:false, limites de contexto e orçamento. Nunca aplicar filtros
+ou imóveis a partir de JSON parcial. Não é pré-requisito para corrigir SQL.
+
+6. Testes simulados para equivalência de filtros/paginação/exclusões, publicação,
+dados incompletos, mídia privada, erros/limites, query count, texto e áudio. Relate
+antes/depois medidos e custo; não aumente limites, aprove anúncios, troque chaves
+ou faça deploy sem autorização correspondente.
+
+Referências oficiais pesquisadas em 29/10/2026:
+https://developers.openai.com/api/docs/guides/latency-optimization
+https://developers.openai.com/api/docs/guides/prompt-caching

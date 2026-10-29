@@ -52,10 +52,12 @@ export async function POST(req: NextRequest) {
     const path = "/assistant/audio-messages";
     let proxyHeaders: Record<string, string>;
     try { proxyHeaders = questionProxyHeaders(req.headers, new URL(`${baseUrl()}${path}`).pathname, bytes); } catch { return fail(503, "proxy_not_configured"); }
+    const started = performance.now();
     const result = assistantAudioResponseSchema.safeParse(await request(path, {
       method: "POST", headers: { ...proxyHeaders, "Content-Type": contentType, Origin: origin }, body: bytes,
       signal,
     }));
+    headers["Server-Timing"] = `assistant;dur=${(performance.now() - started).toFixed(1)}`;
     if (!result.success || (result.data.data.mode === "property" && String(result.data.data.selected_listing_id) !== String(input.data.selected_listing_id))) return fail(502, "ai_invalid_response");
     return NextResponse.json(result.data, { headers });
   } catch (error) {

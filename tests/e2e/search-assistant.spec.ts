@@ -1,6 +1,31 @@
 import { test, expect } from "@playwright/test";
 import { assistantResponse } from "../assistant-fixtures";
 
+test("clarificação com os mesmos filtros mantém a grade pronta sem outra navegação de resultados", async ({ page }) => {
+  await page.clock.install();
+  const filters = { city: "Araucária", currency: "BRL", price_basis: "base" as const, sort: "recommended" as const };
+  await page.goto("/buscar?assistant=1&city=Arauc%C3%A1ria&currency=BRL&price_basis=base&sort=recommended&page=1&per_page=20");
+  const grid = page.getByLabel("Imóveis da busca", { exact: true }).locator(".property-grid");
+  await grid.evaluate(element => element.setAttribute("data-instance", "preserved"));
+  let resultRequests = 0;
+  page.on("request", request => {
+    const headers = request.headers();
+    if (headers.rsc === "1" && headers["next-router-prefetch"] !== "1" && new URL(request.url()).pathname === "/buscar") resultRequests++;
+  });
+  await page.route("**/api/assistente/mensagens", route => route.fulfill({ json: { data: assistantResponse({ applied_filters: filters, answer: "Você quer comprar ou alugar?" }) } }));
+  await page.getByLabel("O que você procura?").fill("uma casa em araucaria");
+  await page.getByRole("button", { name: "Enviar busca", exact: true }).click();
+  await expect(page.locator(".search-ai-status")).toContainText("Lista atualizada. Você quer comprar ou alugar?");
+  await expect(grid).toHaveAttribute("data-instance", "preserved");
+  expect(resultRequests).toBe(0);
+  // The shortcut must not retain an unchanged list indefinitely.
+  await page.clock.fastForward(61000);
+  await page.getByLabel("O que você procura?").fill("continue com a mesma cidade");
+  await page.getByRole("button", { name: "Enviar busca", exact: true }).click();
+  await expect.poll(() => resultRequests).toBe(1);
+  await expect(page.locator(".search-ai-status")).toContainText("Lista atualizada.");
+});
+
 test("pensa mantendo a lista atual e só atualiza os imóveis após a resposta do backend", async ({ page }) => {
   let releaseAnswer!: () => void;
   let releaseResults!: () => void;

@@ -2,9 +2,24 @@
 
 A busca em `/buscar` e a janela flutuante aceitam gravação e anexo, além do texto.
 `AssistantAudio` pede permissão somente ao clicar em “Gravar áudio”, limita a
-captura a 60 segundos e permite parar, ouvir, descartar e enviar explicitamente.
+captura a 60 segundos. No assistente, “Parar e enviar” (ou atingir 60 s) envia
+automaticamente o arquivo finalizado, uma única vez. O aviso aparece antes da
+captura. Cancelar a gravação descarta os bytes sem envio. Anexos continuam com
+prévia e envio explícito; o cadastro manual mantém a confirmação “Usar este áudio”.
 Sem suporte ou permissão, anexo e texto continuam disponíveis. Tracks, timers e
 URLs locais são liberados ao cancelar, minimizar, trocar de contexto ou desmontar.
+
+As barras usam `AudioContext` + `AnalyserNode.getByteTimeDomainData()` e energia
+RMS do sinal captado, amostrada a aproximadamente 12 Hz, sem rerenders do React
+por quadro. Não há animação aleatória, conexão ao alto-falante, nova permissão
+ou transmissão de áudio pelo medidor. No silêncio, as barras ficam na base;
+sem suporte ao medidor, a captura continua e informa a indisponibilidade da
+visualização. Nós, AudioContext e animation frames são encerrados junto da captura.
+
+Durante envio, outra captura/anexo/texto fica bloqueada. “Cancelar envio e gravar
+outro” aborta a espera HTTP, invalida a tentativa, libera o compositor e descarta
+o áudio local. Respostas tardias não entram na conversa ou na lista. Uma falha ou
+timeout preserva o arquivo para tentativa **manual**, sem reenvio automático.
 
 ## Integração
 
@@ -68,8 +83,20 @@ PLAYWRIGHT_CHANNEL=chrome PLAYWRIGHT_PRODUCTION=true npm run test:e2e -- tests/e
 Testes locais usam exclusivamente o servidor de contrato e áudio sintético.
 Cobrem bytes multipart/Content-Type, HMAC binário, transcrição sem segundo POST,
 seleção e contexto, filtros e lista única, gravação/60 s/liberação de tracks,
-permissão recusada/tardia, cancelamento, deadline de 95 s, erros e Retry-After.
+envio automático, barras no silêncio/com sinal, falha do medidor, bloqueio durante
+envio, cancelamento e nova captura, permissão recusada/tardia, deadline de 95 s,
+erros e Retry-After.
 Desktop e mobile em Chromium; não constituem validação de hardware ou Safari.
+
+Validação da evolução em 29/10/2026: 68 unitários aprovados; 28 cenários de áudio
+aprovados em Chromium desktop/mobile nas verificações finais, incluindo troca
+de filtros durante a captura. A rodada de áudio/busca/home aprovou 56 cenários;
+o cenário adicional de contexto atual passou nos dois dispositivos. Também foram
+validados os fluxos compartilhados de cadastro manual e janela de conversa.
+Build de produção, TypeScript e lint concluídos; permanece somente o aviso
+preexistente de `<img>` em `media-image.tsx`. O stub DOM do teste unitário do
+mapa foi atualizado para o SVG de casinha que já existia no produto.
+Sem microfone físico, transcrição paga ou benchmark do provedor em produção.
 
 Resultado local em 23/10/2026: build de produção e TypeScript concluídos;
 41 testes unitários e 60 E2E aprovados. Lint sem erros, com o aviso preexistente

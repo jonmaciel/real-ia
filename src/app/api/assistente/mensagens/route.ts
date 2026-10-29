@@ -32,10 +32,12 @@ export async function POST(req: NextRequest) {
     let proxyHeaders: Record<string, string>;
     try { proxyHeaders = questionProxyHeaders(req.headers, new URL(`${baseUrl()}${path}`).pathname, body); } catch { return fail(503, "proxy_not_configured"); }
     upstreamSignal = AbortSignal.any([req.signal, AbortSignal.timeout(65000)]);
+    const started = performance.now();
     const result = assistantResponseSchema.safeParse(await request(path, {
       method: "POST", headers: { ...proxyHeaders, "Content-Type": "application/json", Origin: new URL(process.env.APP_URL ?? "http://localhost:3001").origin },
       body, signal: upstreamSignal,
     }));
+    headers["Server-Timing"] = `assistant;dur=${(performance.now() - started).toFixed(1)}`;
     if (!result.success || (result.data.data.mode === "property" && String(result.data.data.selected_listing_id) !== String(input.data.selected_listing_id))) return fail(502, "ai_invalid_response");
     return NextResponse.json(result.data, { headers });
   } catch (e) {

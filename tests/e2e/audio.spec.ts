@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createHash } from "node:crypto";
+import { assistantResponse } from "../assistant-fixtures";
 const audio = Buffer.from([82,73,70,70,38,0,0,0,87,65,86,69,102,109,116,32,16,0,0,0,1,0,1,0,64,31,0,0,128,62,0,0,2,0,16,0,100,97,116,97,2,0,0,0,0,0]);
 const file = (name = "mensagem.wav", buffer = audio) => ({ name, mimeType: "audio/wav", buffer });
 const origin = { Origin: "http://localhost:3001" };
@@ -39,6 +40,7 @@ test("BFF encaminha o multipart binário e o Content-Type originais sem reconstr
   ]);
   const response = await request.post(bff, { headers: { ...origin, "Content-Type": contentType }, data: body });
   expect(response.status()).toBe(200);
+  expect(response.headers()["server-timing"]).toMatch(/^assistant;dur=\d+\.\d$/);
   const observed = await (await request.get("http://localhost:4010/__audio-observation")).json();
   expect(observed.sha256).toBe(createHash("sha256").update(body).digest("hex")); expect(observed.contentType).toBe(contentType);
 });
@@ -83,7 +85,18 @@ test("falha preserva áudio para ação manual e mantém alternativa por texto",
 
 async function fakeMicrophone(page: import("@playwright/test").Page, denied = false, delayed = false) {
   await page.addInitScript(({ denied, delayed }) => {
-    const stats = { requested: 0, stopped: 0 }; Object.assign(window, { microphoneStats: stats });
+    const stats = { requested: 0, stopped: 0, meterClosed: 0 }; Object.assign(window, { microphoneStats: stats, microphoneVolume: 0 });
+    class AudioContextMock {
+      state = "running";
+      createMediaStreamSource() { return { connect() {}, disconnect() {} }; }
+      createAnalyser() { return { fftSize: 512, disconnect() {}, getByteTimeDomainData(samples: Uint8Array) {
+        const volume = (window as unknown as { microphoneVolume: number }).microphoneVolume;
+        samples.forEach((_, i) => { samples[i] = 128 + (i % 2 ? volume : -volume); });
+      } }; }
+      resume() { return Promise.resolve(); }
+      close() { this.state = "closed"; stats.meterClosed++; return Promise.resolve(); }
+    }
+    Object.defineProperty(window, "AudioContext", { configurable: true, value: AudioContextMock });
     const stream = { getTracks: () => [{ stop: () => { stats.stopped++; } }] };
     Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: () => {
       stats.requested++;
@@ -101,13 +114,16 @@ async function fakeMicrophone(page: import("@playwright/test").Page, denied = fa
     Object.defineProperty(window, "MediaRecorder", { configurable: true, value: Recorder });
   }, { denied, delayed });
 }
-test("grava só por ação, para em 60 segundos e libera tracks ao cancelar ou trocar de aba", async ({ page }) => {
+test("grava só por ação, envia ao atingir 60 segundos e libera tracks ao cancelar ou trocar de aba", async ({ page }) => {
+  let calls = 0;
+  await page.route(`**${bff}`, route => { calls++; return route.fulfill({ status: 503, json: { error: { code: "unavailable" } } }); });
   await page.clock.install(); await fakeMicrophone(page); await page.goto("/buscar");
   expect(await page.evaluate(() => (window as unknown as { microphoneStats: { requested: number } }).microphoneStats.requested)).toBe(0);
   await page.getByRole("button", { name: "Gravar áudio", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Parar gravação", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Parar e enviar", exact: true })).toBeVisible();
   await page.clock.fastForward(60000);
   await expect(page.getByRole("button", { name: "Enviar áudio", exact: true })).toBeVisible();
+  expect(calls).toBe(1);
   expect(await page.evaluate(() => (window as unknown as { microphoneStats: { stopped: number } }).microphoneStats.stopped)).toBe(1);
   await page.getByRole("button", { name: "Descartar áudio", exact: true }).click();
   await page.getByRole("button", { name: "Gravar áudio", exact: true }).click();
@@ -165,15 +181,82 @@ test("timeout de 95 segundos preserva áudio e não repete o envio", async ({ pa
   await page.clock.fastForward(120000); expect(calls).toBe(1); release();
 });
 
-test("cancelar envio descarta resposta tardia sem apagar o anexo", async ({ page }) => {
+test("cancelar envio descarta o áudio e a resposta tardia, liberando uma nova gravação", async ({ page }) => {
+  await fakeMicrophone(page);
   let release!: () => void; const delayed = new Promise<void>(resolve => { release = resolve; });
   let calls = 0;
   await page.route(`**${bff}`, async route => { calls++; await delayed; await route.fulfill({ json: { data: {} } }).catch(() => {}); });
   await page.goto("/buscar"); await attach(page);
   await page.getByRole("button", { name: "Enviar áudio", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Cancelar envio", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Cancelar envio", exact: true }).click(); release();
-  await expect(page.getByRole("button", { name: "Enviar áudio", exact: true })).toBeEnabled();
-  await expect(page.getByLabel("Ouvir áudio antes de enviar")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Gravar áudio", exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Arquivo de áudio")).toBeDisabled();
+  await page.getByRole("button", { name: "Cancelar envio e gravar outro", exact: true }).click(); release();
+  await expect(page.getByRole("button", { name: "Gravar áudio", exact: true })).toBeEnabled();
+  await expect(page.getByLabel("Ouvir áudio antes de enviar")).toHaveCount(0);
   await expect(page.locator(".audio-transcription")).toHaveCount(0); expect(calls).toBe(1);
+  await page.getByRole("button", { name: "Gravar áudio", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Parar e enviar", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar gravação", exact: true }).click();
+});
+
+test("barras reagem ao sinal real; parar envia uma única vez, bloqueia captura e aceita cancelar e regravar", async ({ page }, info) => {
+  await fakeMicrophone(page);
+  let calls = 0; let textCalls = 0; let release!: () => void;
+  const delayed = new Promise<void>(resolve => { release = resolve; });
+  page.on("request", request => { if (request.url().includes("/api/assistente/mensagens")) textCalls++; });
+  await page.route(`**${bff}`, async route => {
+    const attempt = ++calls;
+    if (attempt === 1) await delayed;
+    await route.fulfill({ json: { data: assistantResponse({
+      input_type: "audio", transcription: { text: attempt === 1 ? "áudio cancelado" : "áudio novo", model: "contract" },
+      answer: attempt === 1 ? "resposta antiga" : "Em qual cidade você procura?",
+    }) } }).catch(() => {});
+  });
+  await page.goto("/buscar");
+  await page.getByRole("button", { name: "Gravar áudio", exact: true }).dblclick();
+  const meter = page.getByRole("img", { name: "Nível de áudio do microfone" });
+  await expect(meter).toBeVisible();
+  await expect(meter.locator("span").first()).toHaveAttribute("style", /scaleY\(0.12\)/);
+  await page.evaluate(() => { (window as unknown as { microphoneVolume: number }).microphoneVolume = 48; });
+  await expect(meter.locator("span").first()).toHaveAttribute("style", /scaleY\(1\)/);
+  await page.locator(".assistant-audio-preview").screenshot({ path: info.outputPath("recording-meter.png") });
+  await expect(page.getByLabel("O que você procura?")).toBeDisabled();
+  await page.getByRole("button", { name: "Parar e enviar", exact: true }).click();
+  await expect.poll(() => calls).toBe(1);
+  await expect(page.getByRole("button", { name: "Enviar áudio", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Gravar áudio", exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Arquivo de áudio")).toBeDisabled();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { microphoneStats: { stopped: number; meterClosed: number } }).microphoneStats)).toMatchObject({ stopped: 1, meterClosed: 1, requested: 1 });
+  await page.getByRole("button", { name: "Cancelar envio e gravar outro", exact: true }).click();
+  await page.getByRole("button", { name: "Gravar áudio", exact: true }).click();
+  await page.getByRole("button", { name: "Parar e enviar", exact: true }).click();
+  await expect(page.locator(".audio-transcription")).toContainText("áudio novo");
+  release();
+  await expect(page.locator(".audio-transcription")).not.toContainText("áudio cancelado");
+  await expect(page.locator(".search-ai-status")).not.toContainText("resposta antiga");
+  expect(calls).toBe(2); expect(textCalls).toBe(0);
+  await expect(page.getByRole("button", { name: "Gravar áudio", exact: true })).toBeEnabled();
+});
+
+test("falha no medidor não impede gravação nem envio automático", async ({ page }) => {
+  await fakeMicrophone(page);
+  await page.addInitScript(() => { Object.defineProperty(window, "AudioContext", { configurable: true, value: class { constructor() { throw new Error("unsupported"); } } }); });
+  await page.goto("/buscar");
+  await page.getByRole("button", { name: "Gravar áudio", exact: true }).click();
+  await expect(page.getByText("Gravação em andamento; visualização de volume indisponível.")).toBeVisible();
+  await page.getByRole("button", { name: "Parar e enviar", exact: true }).click();
+  await expect(page.locator(".audio-transcription")).toBeVisible();
+});
+
+test("envio ao parar usa os filtros atuais mesmo se uma pill mudar durante a captura", async ({ page, request }) => {
+  await fakeMicrophone(page);
+  await page.goto("/buscar?assistant=1&city=Curitiba");
+  await page.getByRole("button", { name: "Gravar áudio", exact: true }).click();
+  await page.getByRole("link", { name: "Remover filtro Curitiba", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.has("city")).toBe(false);
+  await expect(page.getByLabel("Imóveis da busca", { exact: true })).toHaveAttribute("aria-busy", "false");
+  await page.getByRole("button", { name: "Parar e enviar", exact: true }).click();
+  await expect(page.locator(".audio-transcription")).toBeVisible();
+  const observed = await (await request.get("http://localhost:4010/__audio-observation")).json();
+  expect(observed.metadata.context.current_filters?.city).toBeUndefined();
 });

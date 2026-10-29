@@ -34,6 +34,8 @@ export function SearchAssistant({ manualForm, children, filterPills, query, quer
   const id = useId();
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const input = useRef<HTMLTextAreaElement>(null);
+  const listLoadedAt = useRef(0);
+  useEffect(() => { listLoadedAt.current = Date.now(); }, [queryKey, children, resultError]);
   useEffect(() => { continueSearch(); }, [continueSearch]);
   useEffect(() => subscribeSearch(last => {
     if (last.action === "traditional_search" && last.ui_action?.type === "switch_search_tab") setManual(true);
@@ -42,11 +44,15 @@ export function SearchAssistant({ manualForm, children, filterPills, query, quer
     const key = responseKey(last, query.perPage);
     if (!key) { setUpdateError(true); return; }
     setUpdateError(false); setExpectedKey(key);
+    // The validated list already represents these exact criteria/exclusions/page.
+    // A clarification with unchanged filters only needs its new answer, not RSC.
+    if (placement === "results" && key === queryKey && !resultError && Date.now() - listLoadedAt.current < 60000) return;
     startTransition(() => {
       if (placement === "home") router.push(`/buscar?${key}`);
+      else if (key === queryKey) router.refresh();
       else router.replace(`/buscar?${key}`, { scroll: false });
     });
-  }), [subscribeSearch, query.perPage, router, placement]);
+  }), [subscribeSearch, query.perPage, queryKey, resultError, router, placement]);
   const updating = chat.busy || pending;
   const updated = expectedKey === queryKey && !resultError && !updateError;
   const message = chat.busy ? chat.sendingAudio ? "Transcrevendo e pensando…" : "Pensando…"
@@ -124,10 +130,10 @@ export function SearchAssistant({ manualForm, children, filterPills, query, quer
           </button>
           <span id={`${id}-help`} className="sr-only">Descreva o imóvel, a cidade e o orçamento. Enter envia; Shift mais Enter quebra linha. Até 2.000 caracteres. A IA pode errar.</span>
         </form>
-        <AssistantAudio key={`${chat.state.selectedId}:${chat.conversationVersion}`} active={!manual} disabled={updating || chat.waiting || chat.error?.code === "invalid_search_token" || chat.error?.status === 404} onActiveChange={setAudioActive} onSend={file => send(file)} />
+        <AssistantAudio key={`${chat.state.selectedId}:${chat.conversationVersion}`} active={!manual} disabled={updating || chat.waiting || chat.error?.code === "invalid_search_token" || chat.error?.status === 404} onActiveChange={setAudioActive} onCancel={chat.cancel} onSend={file => send(file)} />
         {last?.input_type === "audio" && last.transcription && <p className="audio-transcription"><strong>Transcrição:</strong> {last.transcription.text}</p>}
         <div className="search-ai-status" role="status" aria-live="polite" aria-atomic="true">{message}{clarification && <> <AssistantMarkdown text={clarification.answer} citations={clarification.citations} /></>}{chat.waiting && ` Tente novamente em ${chat.secondsLeft} s.`}</div>
-        {chat.busy && <button type="button" className="search-ai-restart" onClick={() => chat.cancel()}>Cancelar envio</button>}
+        {chat.busy && !chat.sendingAudio && <button type="button" className="search-ai-restart" onClick={() => chat.cancel()}>Cancelar envio</button>}
         {(chat.error?.code === "invalid_search_token" || chat.error?.status === 404) && <button type="button" className="search-ai-restart" onClick={restart}>Iniciar nova busca</button>}
       </div>
       <div role="tabpanel" id={`${id}-panel-1`} aria-labelledby={`${id}-tab-1`} hidden={!manual} inert={updating} onSubmitCapture={submitFilters}>

@@ -176,4 +176,8 @@
 .assistant-audio-preview audio { display: block; width: 100%; max-width: 440px; height: 44px; margin-bottom: 8px; }
 .audio-transcription { margin-top: 12px; padding: 10px 12px; background: #f6f7f8; border-radius: 8px; white-space: pre-wrap; }
 .assistant-audio-error { color: #a32b23; font-size: 12px; line-height: 1.6; }
+.audio-level-meter { margin-bottom: 10px; }
+.audio-level-bars { display: flex; align-items: center; gap: 4px; height: 40px; max-width: 260px; }
+.audio-level-bars span { flex: 1; height: 32px; max-width: 8px; border-radius: 4px; background: var(--primary, #bd4306); transform: scaleY(.12); }
+.audio-level-meter small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
 .chat-window .assistant-audio { flex-shrink: 0; }

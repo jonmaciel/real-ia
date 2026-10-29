@@ -9,7 +9,7 @@ test("Google opcional exige configuração e Nearby usa campos mínimos, tipos, 
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
   let query: Record<string, unknown> | undefined;
   let calls = 0;
-  const element = () => ({ className: "", dataset: {}, textContent: "", append() {}, classList: { toggle() {} }, replaceChildren() {} });
+  const element = () => ({ className: "", dataset: {}, textContent: "", append() {}, setAttribute() {}, classList: { toggle() {} }, replaceChildren() {} });
   class MapStub { setCenter() {} setZoom() {} fitBounds() {} }
   class BoundsStub { extend() {} }
   class LineStub { setMap() {} }
@@ -33,7 +33,7 @@ test("Google opcional exige configuração e Nearby usa campos mínimos, tipos, 
     await assert.rejects(createGoogleMap(options), /google_maps_not_configured/);
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = "contract-key"; process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID = "contract-map-id";
     Object.defineProperty(globalThis, "window", { configurable: true, value: { google: sdk } });
-    Object.defineProperty(globalThis, "document", { configurable: true, value: { createElement: element } });
+    Object.defineProperty(globalThis, "document", { configurable: true, value: { createElement: element, createElementNS: element } });
     const map = await createGoogleMap(options);
     const places = await map.search("essentials", 500, new AbortController().signal);
     assert.equal(calls, 1); assert.equal(places.length, 1); assert.equal(places[0].category, "bakery");

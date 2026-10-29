@@ -3,16 +3,23 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Mic, Paperclip, Square, X } from "lucide-react";
 import { AUDIO_ACCEPT, MAX_AUDIO_BYTES, MAX_RECORDING_MS, audioErrorMessage, audioFileError } from "@/lib/assistant-audio";
 import { flags } from "@/lib/presentation";
+import { AudioLevelMeter } from "./audio-level-meter";
 type Stage = "idle" | "permission" | "recording" | "finishing" | "ready" | "sending";
-type Props = { disabled: boolean; active?: boolean; sendLabel?: string; onActiveChange: (active: boolean) => void; onSend: (audio: File) => Promise<boolean> };
+type Props = { disabled: boolean; active?: boolean; sendLabel?: string; autoSendRecording?: boolean; onCancel?: () => void; onActiveChange: (active: boolean) => void; onSend: (audio: File) => Promise<boolean> };
 export function AssistantAudio(props: Props) { return flags.voiceSearch && props.active !== false ? <AudioControls {...props} /> : null; }
-function AudioControls({ disabled, onActiveChange, onSend, sendLabel = "Enviar áudio" }: Props) {
-  const [stage, setStage] = useState<Stage>("idle");
+function AudioControls({ disabled, onActiveChange, onSend, onCancel, autoSendRecording = true, sendLabel = "Enviar áudio" }: Props) {
+  const [stage, updateStage] = useState<Stage>("idle");
+  const phase = useRef<Stage>("idle");
+  const setStage = useCallback((next: Stage) => { phase.current = next; updateStage(next); }, []);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
   const generation = useRef(0);
+  const sending = useRef(false);
+  const cancelSend = useRef(onCancel);
+  const sendAudio = useRef(onSend);
+  useEffect(() => { cancelSend.current = onCancel; sendAudio.current = onSend; }, [onCancel, onSend]);
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,23 +36,26 @@ function AudioControls({ disabled, onActiveChange, onSend, sendLabel = "Enviar �
     stream.current?.getTracks().forEach(track => track.stop()); stream.current = null;
   }, []);
   const discard = useCallback(() => {
+    if (sending.current) { sending.current = false; cancelSend.current?.(); }
     generation.current++; release();
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
     previewRef.current = ""; setPreview(""); setFile(null); setStage("idle"); setError(""); setSeconds(0); onActiveChange(false);
-  }, [release, onActiveChange]);
+  }, [release, onActiveChange, setStage]);
   useEffect(() => () => {
+    if (sending.current) { sending.current = false; cancelSend.current?.(); }
     generation.current++; release();
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
     onActiveChange(false);
   }, [release, onActiveChange]);
   function choose(file: File) {
     const invalid = audioFileError(file);
-    if (invalid) { discard(); setError(audioErrorMessage(invalid.code)!); return; }
+    if (invalid) { discard(); setError(audioErrorMessage(invalid.code)!); return false; }
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
     previewRef.current = URL.createObjectURL(file); setPreview(previewRef.current); setFile(file); setStage("ready"); setError(""); onActiveChange(true);
+    return true;
   }
   async function start() {
-    if (disabled || stage !== "idle") return;
+    if (disabled || phase.current !== "idle") return;
     setError("");
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
       setError("A gravação não está disponível neste navegador. Anexe um áudio ou digite sua mensagem."); return;
@@ -72,7 +82,8 @@ function AudioControls({ disabled, onActiveChange, onSend, sendLabel = "Enviar �
         if (version !== generation.current) return;
         release();
         const type = recording.mimeType || mime;
-        choose(new File(chunks, type.includes("mp4") ? "mensagem.m4a" : "mensagem.webm", { type }));
+        const audio = new File(chunks, type.includes("mp4") ? "mensagem.m4a" : "mensagem.webm", { type });
+        if (choose(audio) && autoSendRecording) void sendFile(audio);
       };
       recording.start(1000); setStage("recording"); setSeconds(0);
       ticker.current = setInterval(() => setSeconds(value => value + 1), 1000);
@@ -83,15 +94,17 @@ function AudioControls({ disabled, onActiveChange, onSend, sendLabel = "Enviar �
       setError(cause instanceof DOMException && cause.name === "NotAllowedError" ? "O acesso ao microfone não foi permitido. Você pode anexar um áudio ou digitar sua mensagem." : "Não foi possível acessar o microfone. Anexe um áudio ou digite sua mensagem.");
     }
   }
-  async function send() {
-    if (!file || disabled || stage !== "ready") return;
+  async function sendFile(audio: File) {
+    if (sending.current) return;
     const version = generation.current;
-    setStage("sending");
+    sending.current = true; setStage("sending"); setError("");
     try {
-      const sent = await onSend(file);
+      // Recording may span a filter navigation; submit with the current context.
+      const sent = await sendAudio.current(audio);
       if (version !== generation.current) return;
+      sending.current = false;
       if (sent) discard(); else setStage("ready");
-    } catch { if (version === generation.current) { setStage("ready"); setError("Não foi possível enviar o áudio. Tente novamente ou digite sua mensagem."); } }
+    } catch { if (version === generation.current) { sending.current = false; setStage("ready"); setError("Não foi possível enviar o áudio. Tente novamente ou digite sua mensagem."); } }
   }
   return <div className="assistant-audio">
     <input ref={upload} type="file" accept={AUDIO_ACCEPT} hidden disabled={disabled || stage !== "idle"} aria-label="Arquivo de áudio" onChange={event => {
@@ -100,16 +113,18 @@ function AudioControls({ disabled, onActiveChange, onSend, sendLabel = "Enviar �
     {stage === "idle" ? <div className="assistant-audio-actions">
       <button type="button" disabled={disabled} onClick={() => void start()}><Mic size={18} aria-hidden="true" />Gravar áudio</button>
       <button type="button" disabled={disabled} onClick={() => upload.current?.click()}><Paperclip size={18} aria-hidden="true" />Anexar áudio</button>
-      <small>Até 4 MiB · gravação de até 60 s</small>
+      <small>{autoSendRecording ? "Ao parar, o áudio será enviado · até 60 s / 4 MiB" : "Até 4 MiB · gravação de até 60 s"}</small>
     </div> : <div className="assistant-audio-preview">
       {stage === "permission" ? <p role="status">Aguardando permissão para usar o microfone…</p>
-        : stage === "recording" ? <p role="timer" aria-live="off">Gravando · {String(Math.min(seconds, 60)).padStart(2, "0")} s / 60 s</p>
+        : stage === "recording" ? <><AudioLevelMeter stream={stream.current!} /><p role="timer" aria-live="off">Gravando · {String(Math.min(seconds, 60)).padStart(2, "0")} s / 60 s</p></>
         : stage === "finishing" ? <p role="status">Preparando áudio…</p>
+        : stage === "sending" ? <p role="status">Enviando áudio e aguardando o assistente…</p>
         : <><p id={`${id}-file`}>{file?.name} · {Math.ceil((file?.size ?? 0) / 1024)} KiB</p><audio controls preload="metadata" src={preview} aria-label="Ouvir áudio antes de enviar" /></>}
       <div className="assistant-audio-actions">
-        {stage === "recording" && <button type="button" onClick={() => { setStage("finishing"); release(); }}><Square size={16} aria-hidden="true" />Parar gravação</button>}
+        {stage === "recording" && <button type="button" onClick={() => { setStage("finishing"); release(); }}><Square size={16} aria-hidden="true" />{autoSendRecording ? "Parar e enviar" : "Parar gravação"}</button>}
         {stage !== "sending" && <button type="button" onClick={discard}><X size={16} aria-hidden="true" />{stage === "ready" ? "Descartar áudio" : "Cancelar gravação"}</button>}
-        {(stage === "ready" || stage === "sending") && <button type="button" className="button primary" disabled={disabled || stage === "sending"} onClick={() => void send()}>{stage === "sending" ? "Preparando áudio…" : sendLabel}</button>}
+        {stage === "sending" && <button type="button" onClick={discard}><X size={16} aria-hidden="true" />Cancelar envio e gravar outro</button>}
+        {stage === "ready" && <button type="button" className="button primary" disabled={disabled} onClick={() => { if (file && !disabled) void sendFile(file); }}>{sendLabel}</button>}
       </div>
     </div>}
     {error && <p className="assistant-audio-error" role="alert">{error}</p>}
